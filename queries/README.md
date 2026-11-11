@@ -1,1 +1,3 @@
-SQL queries and operations for the BeReal database
+# SQL Queries
+
+Contains SQL queries and operations used to manage and retrieve data from the BeReal database.
