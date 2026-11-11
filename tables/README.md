@@ -1,0 +1,1 @@
+Individual SQL table definitions
