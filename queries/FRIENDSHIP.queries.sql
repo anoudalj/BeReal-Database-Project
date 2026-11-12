@@ -6,7 +6,7 @@
 INSERT INTO FRIENDSHIP
 (Date_Requested, Requester_ID, Receiver_ID, Status)
 VALUES
-(CURRENT_DATE, 101, 102, 'Pending');
+(CURRENT_DATE, 3, 2, 'Pending');
 
 
 -- 2. UPDATE: Accept a friendship request
@@ -14,7 +14,7 @@ VALUES
 UPDATE FRIENDSHIP
 SET Status = 'Accepted',
     ApprovedDate = CURRENT_DATE
-WHERE Friendship_id = 301
+WHERE Friendship_id = 1
 AND Status = 'Pending';
 
 
@@ -28,3 +28,4 @@ FROM FRIENDSHIP F
 JOIN `USER` U
     ON F.Requester_ID = U.UserID
 WHERE F.Status = 'Pending';
+
