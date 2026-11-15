@@ -1,0 +1,13 @@
+CREATE TABLE TAGGED_ON (
+    UserID INT NOT NULL,
+    PostID INT NOT NULL,
+
+    PRIMARY KEY (UserID, PostID),
+
+    FOREIGN KEY (UserID)
+        REFERENCES `USER`(UserID),
+
+    FOREIGN KEY (PostID)
+        REFERENCES post(PostID)
+        ON DELETE CASCADE
+);
