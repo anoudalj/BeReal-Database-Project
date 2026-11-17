@@ -8,6 +8,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
 
 public class AdvancedQueriesGUI extends JFrame {
@@ -77,10 +78,25 @@ public class AdvancedQueriesGUI extends JFrame {
 
     private void loadQueries() {
         Path file = findQueryFile();
+
+        // If the file was not found automatically, let the user pick it
         if (file == null) {
             JOptionPane.showMessageDialog(this,
-                "Could not find queries/AdvancedQueries.sql.\n" +
-                "Run the program from the project folder.");
+                "The query file was not found automatically.\n" +
+                "Please select queries/AdvancedQueries.sql from the project folder.");
+
+            JFileChooser chooser = new JFileChooser();
+            chooser.setDialogTitle("Select AdvancedQueries.sql");
+            chooser.setFileFilter(new FileNameExtensionFilter("SQL files", "sql"));
+
+            if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                file = chooser.getSelectedFile().toPath();
+            }
+        }
+
+        if (file == null) {
+            JOptionPane.showMessageDialog(this,
+                "No query file selected. The queries cannot run.");
             return;
         }
 
@@ -106,6 +122,11 @@ public class AdvancedQueriesGUI extends JFrame {
                 if (!statement.isEmpty()) {
                     queries.add(statement);
                 }
+            }
+
+            if (queries.isEmpty()) {
+                JOptionPane.showMessageDialog(this,
+                    "The file was read but no queries were found:\n" + file);
             }
 
         } catch (IOException ex) {
