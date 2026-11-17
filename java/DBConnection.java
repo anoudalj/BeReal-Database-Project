@@ -9,9 +9,14 @@ import java.util.Properties;
 
 public class DBConnection {
 
-    private static final String URL = "jdbc:mysql://127.0.0.1:3306/test";
-    private static final String USER = "root";
-    private static final String PASSWORD = "ProjectDB@";
+    private static final String URL =
+    System.getenv("DB_URL");
+
+private static final String USER =
+    System.getenv("DB_USER");
+
+private static final String PASSWORD =
+    System.getenv("DB_PASSWORD");
 
     private static final String JAR_NAME = "mysql-connector-j-26.10.0.jar";
     private static final String DRIVER_CLASS = "com.mysql.cj.jdbc.Driver";
