@@ -136,15 +136,45 @@ public class AdvancedQueriesGUI extends JFrame {
     }
 
     private Path findQueryFile() {
-        for (String candidate : QUERY_FILE_CANDIDATES) {
-            Path path = Paths.get(candidate);
-            if (Files.exists(path)) {
-                return path;
-            }
-        }
-        return null;
+    // 1) Search from the current folder upward
+    Path found = searchUpwards(Paths.get("").toAbsolutePath());
+    if (found != null) {
+        return found;
     }
 
+    // 2) Search from the folder where this class was compiled
+    try {
+        Path classLocation = Paths.get(
+            AdvancedQueriesGUI.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+
+        if (!Files.isDirectory(classLocation)) {
+            classLocation = classLocation.getParent();
+        }
+        return searchUpwards(classLocation.toAbsolutePath());
+    } catch (Exception e) {
+        return null;
+    }
+}
+
+// Looks in this folder and its parents for the queries file
+private static Path searchUpwards(Path start) {
+    Path dir = start;
+    while (dir != null) {
+        Path direct = dir.resolve("queries").resolve("AdvancedQueries.sql");
+        if (Files.exists(direct)) {
+            return direct;
+        }
+
+        Path nested = dir.resolve("BeReal-Database-Project")
+                         .resolve("queries").resolve("AdvancedQueries.sql");
+        if (Files.exists(nested)) {
+            return nested;
+        }
+
+        dir = dir.getParent();
+    }
+    return null;
+}
     // ---------- Running queries ----------
 
     // Runs the query at the given index and shows the result in the table
