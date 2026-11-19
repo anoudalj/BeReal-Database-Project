@@ -6,6 +6,7 @@ import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.security.SecureRandom;
+import java.security.MessageDigest;
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -166,7 +167,7 @@ public class UserManagementGUI extends JFrame {
         return l;
     }
 
-    private String hashPassword(char[] password) throws Exception {
+    private static String hashPassword(char[] password) throws Exception {
         byte[] salt = new byte[16];
         new SecureRandom().nextBytes(salt);
         PBEKeySpec spec = new PBEKeySpec(password, salt, 120000, 256);
@@ -322,6 +323,7 @@ public class UserManagementGUI extends JFrame {
                         + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 try (Connection con = DBConnection.getConnection();
                      PreparedStatement st = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                    ensureUniqueIdentity(con, mail, name, null);
                     st.setString(1, mail);
                     st.setString(2, name);
                     st.setString(3, hashPassword(pass));
@@ -360,16 +362,14 @@ public class UserManagementGUI extends JFrame {
         JPanel details = form();
         details.setPreferredSize(new Dimension(450, 345));
         try (Connection con = DBConnection.getConnection();
-             PreparedStatement st = con.prepareStatement("SELECT * FROM `USER` WHERE UserID = ?")) {
+             PreparedStatement st = con.prepareStatement("SELECT Email, Username, Bio, DOB, Account_Type, UserType, JoinDate, ProfilePicture FROM `USER` WHERE UserID = ?")) {
             st.setInt(1, createdID);
             try (ResultSet rs = st.executeQuery()) {
                 if (rs.next()) {
-                    addField(details, "User ID", value(rs.getString("UserID")), 0);
                     addField(details, "Username", value("@" + rs.getString("Username")), 1);
                     addField(details, "Email", value(rs.getString("Email")), 2);
                     addField(details, "Privacy", value(capitalized(rs.getString("Account_Type"))), 3);
                     addField(details, "User type", value(capitalized(rs.getString("UserType"))), 4);
-                    addField(details, "Status", value(capitalized(rs.getString("AccountStatus"))), 5);
                     addField(details, "Joined", value(rs.getString("JoinDate")), 6);
                 }
             }
@@ -389,7 +389,7 @@ public class UserManagementGUI extends JFrame {
         card.setBackground(LIGHT);
         card.setBorder(new EmptyBorder(25, 25, 25, 25));
         try (Connection con = DBConnection.getConnection();
-             PreparedStatement st = con.prepareStatement("SELECT * FROM `USER` WHERE UserID = ?")) {
+             PreparedStatement st = con.prepareStatement("SELECT Email, Username, Bio, DOB, Account_Type, UserType, JoinDate, ProfilePicture FROM `USER` WHERE UserID = ?")) {
             st.setInt(1, userID);
             try (ResultSet rs = st.executeQuery()) {
                 if (!rs.next()) { error("User ID not found."); return; }
@@ -398,13 +398,11 @@ public class UserManagementGUI extends JFrame {
                 Avatar avatar = new Avatar(105);
                 avatar.setPhoto(rs.getString("ProfilePicture"));
                 top.add(avatar);
-                JPanel identity = new JPanel(new GridLayout(3, 1, 0, 3));
+                JPanel identity = new JPanel(new GridLayout(1, 1, 0, 3));
                 identity.setOpaque(false);
                 JLabel name = value("@" + rs.getString("Username"));
                 name.setFont(new Font("SansSerif", Font.BOLD, 24));
                 identity.add(name);
-                identity.add(value("User ID: " + userID));
-                identity.add(value("Status: " + capitalized(rs.getString("AccountStatus"))));
                 top.add(identity);
                 card.add(top, BorderLayout.NORTH);
                 JPanel info = form();
@@ -422,7 +420,14 @@ public class UserManagementGUI extends JFrame {
         p.add(scroll, BorderLayout.CENTER);
         JButton edit = button("Edit my profile", true);
         edit.addActionListener(e -> editUser());
-        p.add(footer(edit, this::dispose), BorderLayout.SOUTH);
+        JPanel actions = footer(edit, this::dispose);
+        JButton password = button("Change password", false);
+        password.addActionListener(e -> changePassword());
+        JButton people = button("Find people", false);
+        people.addActionListener(e -> findPublicProfile());
+        actions.add(password, 0);
+        actions.add(people, 0);
+        p.add(actions, BorderLayout.SOUTH);
         show("profile", p);
     }
 
@@ -430,7 +435,8 @@ public class UserManagementGUI extends JFrame {
         final int userID = requireAuthenticatedUserId();
         JPanel p = page("Edit my profile", "Update your account information.");
         JPanel f = form();
-        JTextField email = input(), username = input(), bio = input(), dob = dateInput();
+        JTextField email = input(), username = input(), bio = input();
+        JLabel dob = value(null);
         JComboBox<String> privacy = new JComboBox<>(new String[]{"Public", "Private"});
         privacy.setFont(new Font("SansSerif", Font.PLAIN, 14));
         privacy.setBackground(BeRealTheme.SURFACE);
@@ -441,15 +447,14 @@ public class UserManagementGUI extends JFrame {
         Avatar avatar = new Avatar(88);
         String[] photoPath = {""};
         try (Connection con = DBConnection.getConnection();
-             PreparedStatement st = con.prepareStatement("SELECT * FROM `USER` WHERE UserID = ?")) {
+             PreparedStatement st = con.prepareStatement("SELECT Email, Username, Bio, DOB, Account_Type, UserType, JoinDate, ProfilePicture FROM `USER` WHERE UserID = ?")) {
             st.setInt(1, userID);
             try (ResultSet rs = st.executeQuery()) {
                 if (!rs.next()) { error("User ID not found."); return; }
                 email.setText(rs.getString("Email"));
                 username.setText(rs.getString("Username"));
                 bio.setText(rs.getString("Bio"));
-                String date = rs.getString("DOB");
-                if (date != null) dob.setText(date);
+                dob.setText(rs.getString("DOB") == null ? "—" : rs.getString("DOB"));
                 privacy.setSelectedItem(capitalized(rs.getString("Account_Type")));
                 photoPath[0] = rs.getString("ProfilePicture");
                 avatar.setPhoto(photoPath[0]);
@@ -476,38 +481,29 @@ public class UserManagementGUI extends JFrame {
             }
         });
         remove.addActionListener(e -> { photoPath[0] = ""; avatar.setPhoto(""); });
-        addField(f, "User ID", value(String.valueOf(userID)), 0);
         addField(f, "Profile photo", photo, 1);
         addField(f, "Email", email, 2);
         addField(f, "Username", username, 3);
         addField(f, "Bio", bio, 4);
-        addField(f, "Date of birth (YYYY-MM-DD)", dob, 5);
+        addField(f, "Date of birth", dob, 5);
         addField(f, "Account privacy", privacyBox, 6);
         JButton save = button("Save changes", true);
         save.addActionListener(e -> {
             String mail = email.getText().trim(), name = username.getText().trim();
-            String date = dob.getText().trim();
             if (!validEmail(mail) || mail.length() > 255) { error("Enter a valid email address."); return; }
             if (name.isEmpty() || name.length() > 50) { error("Username must be 1–50 characters."); return; }
-            if (!date.isEmpty()) {
-                try {
-                    if (date.length() != 10 || LocalDate.parse(date).isAfter(LocalDate.now()))
-                        throw new IllegalArgumentException();
-                } catch (Exception ex) { error("Enter a valid birth date in YYYY-MM-DD format."); return; }
-            }
-            String sql = "UPDATE `USER` SET Email = ?, Username = ?, Bio = ?, DOB = ?, "
+            String sql = "UPDATE `USER` SET Email = ?, Username = ?, Bio = ?, "
                     + "Account_Type = ?, ProfilePicture = ? WHERE UserID = ?";
             try (Connection con = DBConnection.getConnection();
                  PreparedStatement st = con.prepareStatement(sql)) {
+                ensureUniqueIdentity(con, mail, name, userID);
                 st.setString(1, mail);
                 st.setString(2, name);
                 st.setString(3, bio.getText().trim());
-                if (date.isEmpty()) st.setNull(4, Types.DATE);
-                else st.setDate(4, java.sql.Date.valueOf(date));
-                st.setString(5, privacy.getSelectedItem().toString());
-                if (photoPath[0] == null || photoPath[0].isEmpty()) st.setNull(6, Types.VARCHAR);
-                else st.setString(6, photoPath[0]);
-                st.setInt(7, userID);
+                st.setString(4, privacy.getSelectedItem().toString());
+                if (photoPath[0] == null || photoPath[0].isEmpty()) st.setNull(5, Types.VARCHAR);
+                else st.setString(5, photoPath[0]);
+                st.setInt(6, userID);
                 if (st.executeUpdate() > 0) { message("Changes saved!"); profile(); }
                 else error("User ID not found.");
             } catch (SQLException ex) { error("Update failed: " + ex.getMessage()); }
@@ -518,6 +514,144 @@ public class UserManagementGUI extends JFrame {
         p.add(scroll, BorderLayout.CENTER);
         p.add(footer(save, this::profile), BorderLayout.SOUTH);
         show("edit", p);
+    }
+
+    private static void ensureUniqueIdentity(Connection con, String email, String username,
+                                             Integer ownerId) throws SQLException {
+        String sql = "SELECT Email = ? AS EmailTaken, Username = ? AS UsernameTaken FROM `USER` "
+                + "WHERE (Email = ? OR Username = ?)" + (ownerId == null ? "" : " AND UserID <> ?") + " LIMIT 1";
+        try (PreparedStatement st = con.prepareStatement(sql)) {
+            st.setString(1, email); st.setString(2, username);
+            st.setString(3, email); st.setString(4, username);
+            if (ownerId != null) st.setInt(5, ownerId);
+            try (ResultSet rs = st.executeQuery()) {
+                if (rs.next()) throw new SQLException(rs.getBoolean("EmailTaken")
+                        ? "That email address is already in use." : "That username is already in use.");
+            }
+        }
+    }
+
+    private static boolean verifyPassword(char[] password, String stored) {
+        if (stored == null) return false;
+        PBEKeySpec spec = null;
+        try {
+            String[] parts = stored.split(":");
+            if (parts.length != 4 || !"pbkdf2".equals(parts[0])) return false;
+            int iterations = Integer.parseInt(parts[1]);
+            if (iterations <= 0 || iterations > 1000000) return false;
+            byte[] expected = Base64.getDecoder().decode(parts[3]);
+            spec = new PBEKeySpec(password, Base64.getDecoder().decode(parts[2]), iterations, 256);
+            byte[] actual = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+                    .generateSecret(spec).getEncoded();
+            return MessageDigest.isEqual(actual, expected);
+        } catch (Exception ex) { return false; }
+        finally { if (spec != null) spec.clearPassword(); }
+    }
+
+    private static void updateOwnPassword(Connection con, int ownerId, char[] current,
+                                          char[] next, char[] confirmation) throws Exception {
+        if (ownerId <= 0) throw new IllegalArgumentException("Log in before changing your password.");
+        if (current.length == 0 || next.length == 0) {
+            throw new IllegalArgumentException("Enter your current and new passwords.");
+        }
+        if (!Arrays.equals(next, confirmation)) {
+            throw new IllegalArgumentException("The new passwords do not match.");
+        }
+        if (Arrays.equals(current, next)) {
+            throw new IllegalArgumentException("Choose a different password.");
+        }
+        String stored;
+        try (PreparedStatement st = con.prepareStatement("SELECT Password FROM `USER` WHERE UserID = ?")) {
+            st.setInt(1, ownerId);
+            try (ResultSet rs = st.executeQuery()) {
+                if (!rs.next()) throw new IllegalArgumentException("Your account could not be found.");
+                stored = rs.getString("Password");
+            }
+        }
+        if (!verifyPassword(current, stored)) {
+            throw new IllegalArgumentException("The current password is incorrect.");
+        }
+        // The old hash also prevents overwriting a password changed in another window.
+        try (PreparedStatement st = con.prepareStatement(
+                "UPDATE `USER` SET Password = ? WHERE UserID = ? AND Password = ?")) {
+            st.setString(1, hashPassword(next)); st.setInt(2, ownerId); st.setString(3, stored);
+            if (st.executeUpdate() != 1) {
+                throw new SQLException("Your password changed elsewhere. Re-enter your current password.");
+            }
+        }
+    }
+
+    private void changePassword() {
+        final int ownerId = requireAuthenticatedUserId();
+        JPanel p = page("Change password", "Confirm your current password to choose a new one.");
+        JPanel f = form();
+        JPasswordField current = new JPasswordField(), next = new JPasswordField(), confirmation = new JPasswordField();
+        style(current); style(next); style(confirmation);
+        addField(f, "Current password", current, 0);
+        addField(f, "New password", next, 1);
+        addField(f, "Confirm new password", confirmation, 2);
+        JButton save = button("Update password", true);
+        save.addActionListener(e -> {
+            char[] oldValue = current.getPassword(), newValue = next.getPassword(), repeated = confirmation.getPassword();
+            try (Connection con = DBConnection.getConnection()) {
+                updateOwnPassword(con, ownerId, oldValue, newValue, repeated);
+                current.setText(""); next.setText(""); confirmation.setText("");
+                message("Password updated. Use your new password next time you log in.");
+                profile();
+            } catch (Exception ex) { error(ex.getMessage()); }
+            finally {
+                Arrays.fill(oldValue, '\0'); Arrays.fill(newValue, '\0'); Arrays.fill(repeated, '\0');
+                current.setText(""); next.setText(""); confirmation.setText("");
+            }
+        });
+        p.add(f, BorderLayout.CENTER);
+        p.add(footer(save, this::profile), BorderLayout.SOUTH);
+        show("password", p);
+    }
+
+    private void findPublicProfile() {
+        requireAuthenticatedUserId();
+        JPanel p = page("Find people", "View a public profile by its exact username.");
+        JPanel body = new JPanel(new BorderLayout(0, 18)); body.setOpaque(false);
+        JPanel search = new JPanel(new BorderLayout(10, 0)); search.setOpaque(false);
+        JTextField username = input();
+        username.setToolTipText("Username only");
+        JButton find = button("Search", true);
+        search.add(username, BorderLayout.CENTER); search.add(find, BorderLayout.EAST);
+        body.add(search, BorderLayout.NORTH);
+        JPanel result = new JPanel(new BorderLayout()); result.setOpaque(false);
+        body.add(result, BorderLayout.CENTER);
+        Runnable lookup = () -> {
+            String name = username.getText().trim();
+            if (name.startsWith("@")) name = name.substring(1);
+            result.removeAll();
+            if (name.isEmpty() || name.length() > 50) {
+                result.add(value("Enter a username of 1–50 characters."));
+            } else {
+                // Other people's email, DOB, role, status, password and IDs are never fetched.
+                String sql = "SELECT Username, Bio, ProfilePicture, Account_Type FROM `USER` "
+                        + "WHERE Username = ? AND Account_Type = 'Public' LIMIT 1";
+                try (Connection con = DBConnection.getConnection(); PreparedStatement st = con.prepareStatement(sql)) {
+                    st.setString(1, name);
+                    try (ResultSet rs = st.executeQuery()) {
+                        if (!rs.next()) result.add(value("No public profile found."));
+                        else {
+                            JPanel info = form();
+                            Avatar avatar = new Avatar(105); avatar.setPhoto(rs.getString("ProfilePicture"));
+                            addField(info, "Photo", avatar, 0);
+                            addField(info, "Username", value("@" + rs.getString("Username")), 1);
+                            addField(info, "Bio", value(rs.getString("Bio")), 2);
+                            addField(info, "Privacy", value(capitalized(rs.getString("Account_Type"))), 3);
+                            result.add(BeRealTheme.scroll(info));
+                        }
+                    }
+                } catch (SQLException ex) { result.add(value("Unable to load this public profile.")); }
+            }
+            BeRealTheme.apply(result); result.revalidate(); result.repaint();
+        };
+        find.addActionListener(e -> lookup.run()); username.addActionListener(e -> lookup.run());
+        p.add(body, BorderLayout.CENTER); p.add(footer(null, this::profile), BorderLayout.SOUTH);
+        show("people", p);
     }
 
     public static void main(String[] args) {
