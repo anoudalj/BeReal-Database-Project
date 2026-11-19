@@ -6,27 +6,55 @@ import java.security.MessageDigest;
 import java.sql.*;
 import java.util.Base64;
 
-/** Starts with authentication and exposes admin-only tools only after role validation. */
 public class Main extends JFrame {
-    private final CardLayout cards = new CardLayout();
-    private final JPanel content = new JPanel(cards);
-    public Main() { setTitle("BeReal"); setSize(480, 420); setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); setLocationRelativeTo(null); setContentPane(content); showWelcome(); }
-
+    private final JPanel content = BeRealTheme.panel(new BorderLayout());
+    public Main() {
+        BeRealTheme.install(); setTitle("BeReal."); setSize(540, 860);
+        setMinimumSize(new Dimension(480, 680));
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); setLocationRelativeTo(null);
+        setContentPane(content); showWelcome();
+    }
+    private JPanel page(String title, String subtitle) {
+        JPanel p=BeRealTheme.panel(new BorderLayout(0,28));
+        p.setBorder(BorderFactory.createEmptyBorder(32,30,26,30));
+        p.add(BeRealTheme.header(""),BorderLayout.NORTH);
+        JPanel center=BeRealTheme.panel(new GridBagLayout());
+        JPanel stack=BeRealTheme.panel(null); stack.setLayout(new BoxLayout(stack,BoxLayout.Y_AXIS));
+        JLabel h=BeRealTheme.label(title,28,true); h.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel sub=BeRealTheme.note(subtitle); sub.setAlignmentX(Component.CENTER_ALIGNMENT);
+        stack.add(h);stack.add(Box.createVerticalStrut(12));stack.add(sub);stack.add(Box.createVerticalStrut(36));
+        center.add(stack);p.add(center,BorderLayout.CENTER);
+        p.putClientProperty("stack",stack);return p;
+    }
+    private JPanel stack(JPanel p) { return (JPanel)p.getClientProperty("stack"); }
+    private void addButton(JPanel p,JButton b) {
+        b.setAlignmentX(Component.CENTER_ALIGNMENT);b.setMaximumSize(new Dimension(380,50));
+        stack(p).add(b);stack(p).add(Box.createVerticalStrut(12));
+    }
+    private void field(JPanel p,String name,JComponent f) {
+        JLabel l=BeRealTheme.note(name);l.setAlignmentX(Component.CENTER_ALIGNMENT);stack(p).add(l);
+        stack(p).add(Box.createVerticalStrut(7));
+        f.setMaximumSize(new Dimension(380,48));f.setAlignmentX(Component.CENTER_ALIGNMENT);
+        if(f instanceof javax.swing.text.JTextComponent) BeRealTheme.input((javax.swing.text.JTextComponent)f);
+        stack(p).add(f);stack(p).add(Box.createVerticalStrut(18));
+    }
     private void showWelcome() {
-        JPanel p = page("Welcome to BeReal", "Sign in to continue, or create an account.");
-        JButton create = new JButton("Create Account"), login = new JButton("Login");
-        create.addActionListener(e -> new UserManagementGUI().setVisible(true)); login.addActionListener(e -> showLogin());
-        add(p, create, 0); add(p, login, 1); show("welcome", p);
+        JPanel p=page("Your friends. For real.","A little moment from your everyday life.");
+        JLabel mark=BeRealTheme.label("BeReal.",54,true);mark.setAlignmentX(Component.CENTER_ALIGNMENT);
+        stack(p).add(mark,0);stack(p).add(Box.createVerticalStrut(56),1);
+        JButton create=BeRealTheme.button("Create an account",true),login=BeRealTheme.button("Log in",false);
+        create.addActionListener(e -> new UserManagementGUI().setVisible(true));
+        login.addActionListener(e -> showLogin());addButton(p,create);addButton(p,login);showPage(p);
     }
     private void showLogin() {
-        JPanel p = page("Log in", "The selected role must match the account UserType.");
-        JTextField identity = new JTextField(22); JPasswordField password = new JPasswordField(22);
-        JComboBox<String> role = new JComboBox<>(new String[]{"User", "Admin"});
-        JButton signIn = new JButton("Login"), back = new JButton("Back");
-        form(p, "Username or email", identity, 0); form(p, "Password", password, 1); form(p, "Login as", role, 2);
-        add(p, signIn, 3); add(p, back, 4);
-        signIn.addActionListener(e -> authenticate(identity.getText(), password.getPassword(), (String) role.getSelectedItem()));
-        back.addActionListener(e -> showWelcome()); show("login", p);
+        JPanel p=page("Welcome back.","Log in to see what your friends are up to.");
+        JTextField identity=new JTextField(22);JPasswordField password=new JPasswordField(22);
+        JComboBox<String> role=new JComboBox<>(new String[]{"User","Admin"});
+        field(p,"Username or email",identity);field(p,"Password",password);field(p,"Account role",role);
+        JButton signIn=BeRealTheme.button("Continue",true),back=BeRealTheme.button("Back",false);
+        signIn.addActionListener(e -> authenticate(identity.getText(),password.getPassword(),(String)role.getSelectedItem()));
+        password.addActionListener(e -> signIn.doClick());back.addActionListener(e -> showWelcome());
+        addButton(p,signIn);addButton(p,back);showPage(p);getRootPane().setDefaultButton(signIn);
     }
     private void authenticate(String identity, char[] password, String role) {
         if (identity.trim().isEmpty() || password.length == 0) { error("Enter your username/email and password."); return; }
@@ -51,18 +79,29 @@ public class Main extends JFrame {
     }
     // Existing projects commonly call a non-admin account either User or Regular.
     private boolean roleMatches(String selected, String stored) { return "Admin".equalsIgnoreCase(selected) ? "Admin".equalsIgnoreCase(stored) : ("User".equalsIgnoreCase(stored) || "Regular".equalsIgnoreCase(stored)); }
-    private void dashboard(int userId, String username, String role) {
-        JPanel p = page("Hello, " + username, "Logged in as " + role + ".");
-        JButton posts = new JButton("Posts & Moments"), friends = new JButton("Friendships"), interactions = new JButton("Interactions"), logout = new JButton("Log out");
-        posts.addActionListener(e -> new PostGUI(userId).setVisible(true)); friends.addActionListener(e -> new FriendshipManagement().setVisible(true)); interactions.addActionListener(e -> new InteractionsGUI(userId).setVisible(true));
-        add(p, posts, 0); add(p, friends, 1); add(p, interactions, 2);
-        if ("Admin".equalsIgnoreCase(role)) { JButton queries = new JButton("Advanced Queries"); queries.addActionListener(e -> new AdvancedQueriesGUI().setVisible(true)); add(p, queries, 3); add(p, logout, 4); } else add(p, logout, 3);
-        logout.addActionListener(e -> showWelcome()); show("dashboard", p);
+    private void dashboard(int userId,String username,String role) {
+        getRootPane().setDefaultButton(null);
+        JPanel p=BeRealTheme.panel(new BorderLayout(0,22));
+        p.setBorder(BorderFactory.createEmptyBorder(22,24,20,24));
+        JPanel header=BeRealTheme.panel(new BorderLayout(8,0));
+        JButton friends=BeRealTheme.button("Friends",false),profile=BeRealTheme.button("Profile",false);
+        friends.addActionListener(e -> new FriendshipManagement(userId).setVisible(true));
+        profile.addActionListener(e -> new UserManagementGUI(userId).setVisible(true));
+        header.add(friends,BorderLayout.WEST);header.add(BeRealTheme.header(""),BorderLayout.CENTER);header.add(profile,BorderLayout.EAST);
+        p.add(header,BorderLayout.NORTH);BeRealFeed feed=new BeRealFeed(userId);p.add(feed,BorderLayout.CENTER);
+        JPanel bottom=BeRealTheme.panel(new BorderLayout(0,12));
+        JButton capture=BeRealTheme.button("Take a BeReal",true);
+        capture.addActionListener(e -> { PostGUI editor=new PostGUI(userId);editor.addWindowListener(new java.awt.event.WindowAdapter(){
+            @Override public void windowClosed(java.awt.event.WindowEvent event){feed.refresh();}
+        });editor.setVisible(true); });bottom.add(capture,BorderLayout.NORTH);
+        JPanel links=BeRealTheme.panel(new FlowLayout(FlowLayout.CENTER,8,0));
+        if("Admin".equalsIgnoreCase(role)) {
+            JButton queries=BeRealTheme.button("Advanced Queries",false);queries.addActionListener(e -> new AdvancedQueriesGUI().setVisible(true));links.add(queries);
+        }
+        JButton logout=BeRealTheme.button("Log out",false);logout.addActionListener(e -> showWelcome());links.add(logout);
+        bottom.add(links,BorderLayout.CENTER);p.add(bottom,BorderLayout.SOUTH);showPage(p);
     }
-    private JPanel page(String title, String subtitle) { JPanel p = new JPanel(new GridBagLayout()); p.setBorder(BorderFactory.createEmptyBorder(28,55,28,55)); GridBagConstraints c=new GridBagConstraints(); c.gridx=0;c.gridy=0;c.insets=new Insets(5,5,18,5);c.fill=GridBagConstraints.HORIZONTAL;JLabel h=new JLabel(title,SwingConstants.CENTER);h.setFont(new Font("SansSerif",Font.BOLD,25));p.add(h,c);c.gridy=1;c.insets=new Insets(0,5,22,5);p.add(new JLabel(subtitle,SwingConstants.CENTER),c);return p; }
-    private void add(JPanel p,JComponent x,int row){GridBagConstraints c=new GridBagConstraints();c.gridx=0;c.gridy=row+5;c.fill=GridBagConstraints.HORIZONTAL;c.insets=new Insets(6,5,6,5);p.add(x,c);}
-    private void form(JPanel p,String label,JComponent field,int row){GridBagConstraints c=new GridBagConstraints();c.gridx=0;c.gridy=row*2+2;c.anchor=GridBagConstraints.WEST;c.insets=new Insets(5,5,0,5);p.add(new JLabel(label),c);c.gridy++;c.fill=GridBagConstraints.HORIZONTAL;c.insets=new Insets(0,5,8,5);p.add(field,c);}
-    private void show(String name,JPanel p){content.add(p,name);cards.show(content,name);content.revalidate();}
-    private void error(String text){JOptionPane.showMessageDialog(this,text,"BeReal",JOptionPane.ERROR_MESSAGE);}
-    public static void main(String[] args){SwingUtilities.invokeLater(() -> new Main().setVisible(true));}
+    private void showPage(JPanel p) { content.removeAll();content.add(p);content.revalidate();content.repaint(); }
+    private void error(String text) { JOptionPane.showMessageDialog(this,text,"BeReal.",JOptionPane.ERROR_MESSAGE); }
+    public static void main(String[] args) { SwingUtilities.invokeLater(() -> {BeRealTheme.install();new Main().setVisible(true);}); }
 }

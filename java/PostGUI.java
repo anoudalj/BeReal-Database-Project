@@ -9,26 +9,70 @@ public class PostGUI extends JFrame {
     private final int currentUserId;
     public PostGUI() { this(-1); }
     public PostGUI(int currentUserId) {
-        this.currentUserId = currentUserId; setTitle("BeReal Posts"); setSize(520,260); setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); setLocationRelativeTo(null);
-        JButton create=new JButton("Create Post"), view=new JButton("View My Posts"), update=new JButton("Update Caption"), delete=new JButton("Delete Post");
-        JPanel p=new JPanel(new GridLayout(2,2,10,10));p.setBorder(BorderFactory.createEmptyBorder(30,30,30,30));p.add(create);p.add(view);p.add(update);p.add(delete);add(p);
-        create.addActionListener(e->createPost());view.addActionListener(e->viewPosts());update.addActionListener(e->updatePost());delete.addActionListener(e->deletePost());
+        BeRealTheme.install(); this.currentUserId = currentUserId;
+        setTitle("BeReal. | Your moments"); setSize(560, 820);
+        setMinimumSize(new Dimension(500, 680));
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); setLocationRelativeTo(null);
+        JPanel root=BeRealTheme.panel(new BorderLayout(0,20));
+        root.setBorder(BorderFactory.createEmptyBorder(24,24,24,24));
+        root.add(BeRealTheme.header("Your moments, just as they are."),BorderLayout.NORTH);
+        if(currentUserId>0) root.add(new BeRealFeed(currentUserId,true),BorderLayout.CENTER);
+        else root.add(BeRealTheme.label("Sign in from Main to see your moments.",16,false),BorderLayout.CENTER);
+        JPanel controls=BeRealTheme.panel(new GridLayout(2,2,10,10));
+        JButton create=BeRealTheme.button("Take a BeReal",true), view=BeRealTheme.button("Refresh moments",false),
+            update=BeRealTheme.button("Edit caption",false), delete=BeRealTheme.button("Delete a BeReal",false);
+        controls.add(create);controls.add(view);controls.add(update);controls.add(delete);
+        create.addActionListener(e->createPost()); view.addActionListener(e->refreshFeed(root));
+        update.addActionListener(e->{updatePost();refreshFeed(root);});
+        delete.addActionListener(e->{deletePost();refreshFeed(root);});
+        root.add(controls,BorderLayout.SOUTH);setContentPane(root);
     }
+    private void refreshFeed(JPanel root) {
+        for(Component c:root.getComponents()) if(c instanceof BeRealFeed) ((BeRealFeed)c).refresh();
+    }
+
     private JFileChooser chooser() { JFileChooser c=new JFileChooser(); c.setFileFilter(new FileNameExtensionFilter("Image files", "jpg","jpeg","png","gif","bmp")); return c; }
     private void createPost() {
-        JTextField front=new JTextField(),back=new JTextField(),caption=new JTextField(),retakes=new JTextField("0"),late=new JTextField("0"),posted=new JTextField("YYYY-MM-DD HH:MM:SS"),moment=new JTextField();
-        JButton frontPick=new JButton("Choose front image…"),backPick=new JButton("Choose back image…");
-        frontPick.addActionListener(e->chooseImage(front)); backPick.addActionListener(e->chooseImage(back));
-        Object[] form={"Front photo",front,frontPick,"Back photo",back,backPick,"Caption",caption,"Retake count",retakes,"Hours late",late,"Posted at",posted,"Moment ID",moment};
-        if(JOptionPane.showConfirmDialog(this,form,"Create Post",JOptionPane.OK_CANCEL_OPTION)!=JOptionPane.OK_OPTION)return;
-        if(front.getText().trim().isEmpty()||back.getText().trim().isEmpty()||moment.getText().trim().isEmpty()){message("Front image, back image, and Moment ID are required.");return;}
-        int userId=currentUserId; if(userId<=0){String value=JOptionPane.showInputDialog(this,"User ID:");if(value==null)return;try{userId=Integer.parseInt(value.trim());}catch(NumberFormatException ex){message("Enter a valid User ID.");return;}}
-        String sql="INSERT INTO POST (FrontCam, BackCam, Caption, RetakeCount, HoursLate, PostedAt, UserID, MomentID) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        try(Connection c=DBConnection.getConnection();PreparedStatement s=c.prepareStatement(sql)){s.setString(1,front.getText().trim());s.setString(2,back.getText().trim());s.setString(3,caption.getText());s.setInt(4,Integer.parseInt(retakes.getText().trim()));s.setDouble(5,Double.parseDouble(late.getText().trim()));s.setString(6,posted.getText().trim());s.setInt(7,userId);s.setInt(8,Integer.parseInt(moment.getText().trim()));s.executeUpdate();message("Post created successfully.");}catch(Exception ex){error(ex);}
+        JTextField front=new JTextField(), back=new JTextField(), caption=new JTextField(),
+            retakes=new JTextField("0"), late=new JTextField("0"),
+            posted=new JTextField(java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))),
+            moment=new JTextField();
+        BeRealTheme.DualPhoto preview=new BeRealTheme.DualPhoto(null,null,"Choose your two photos");
+        preview.setPreferredSize(new Dimension(350,360));
+        JButton frontPick=BeRealTheme.button("Front photo",false),backPick=BeRealTheme.button("Back photo",false);
+        frontPick.addActionListener(e->{chooseImage(front);preview.setPhotos(back.getText(),front.getText());});
+        backPick.addActionListener(e->{chooseImage(back);preview.setPhotos(back.getText(),front.getText());});
+        JPanel form=BeRealTheme.panel(new GridLayout(0,2,10,8));
+        form.add(frontPick);form.add(backPick);
+        String[] labels={"Front photo path","Back photo path","Add a caption…","Retakes","Hours late","Posted at","Moment ID"};
+        JTextField[] fields={front,back,caption,retakes,late,posted,moment};
+        for(int i=0;i<fields.length;i++) {form.add(BeRealTheme.note(labels[i]));BeRealTheme.input(fields[i]);form.add(fields[i]);}
+        JPanel body=BeRealTheme.panel(new BorderLayout(0,16));body.add(preview,BorderLayout.CENTER);body.add(form,BorderLayout.SOUTH);
+        JScrollPane scroll=BeRealTheme.scroll(body);scroll.setPreferredSize(new Dimension(440,650));
+        while(true) {
+            if(JOptionPane.showConfirmDialog(this,scroll,"Take a BeReal",JOptionPane.OK_CANCEL_OPTION,JOptionPane.PLAIN_MESSAGE)!=JOptionPane.OK_OPTION)return;
+            try {
+                if(front.getText().isBlank()||back.getText().isBlank())throw new IllegalArgumentException("Choose both a front and back photo.");
+                if(javax.imageio.ImageIO.read(new File(front.getText().trim()))==null || javax.imageio.ImageIO.read(new File(back.getText().trim()))==null)
+                    throw new IllegalArgumentException("Choose valid image files.");
+                int n=Integer.parseInt(retakes.getText().trim()),m=Integer.parseInt(moment.getText().trim());
+                double hours=Double.parseDouble(late.getText().trim());
+                if(n<0||m<=0||!Double.isFinite(hours)||hours<0)throw new IllegalArgumentException("Retakes and hours late must be nonnegative; Moment ID must be positive.");
+                Timestamp timestamp=Timestamp.valueOf(posted.getText().trim());
+                int owner=currentUserId;
+                if(owner<=0) {String id=JOptionPane.showInputDialog(this,"User ID:");if(id==null)return;owner=Integer.parseInt(id.trim());if(owner<=0)throw new IllegalArgumentException("Enter a positive User ID.");}
+                String sql="INSERT INTO POST (FrontCam, BackCam, Caption, RetakeCount, HoursLate, PostedAt, UserID, MomentID) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                try(Connection c=DBConnection.getConnection();PreparedStatement st=c.prepareStatement(sql)) {
+                    st.setString(1,front.getText().trim());st.setString(2,back.getText().trim());st.setString(3,caption.getText());
+                    st.setInt(4,n);st.setDouble(5,hours);st.setTimestamp(6,timestamp);st.setInt(7,owner);st.setInt(8,m);st.executeUpdate();
+                }
+                message("BeReal shared.");refreshFeed((JPanel)getContentPane());return;
+            } catch(NumberFormatException ex) {message("Enter valid numbers for retakes, hours late, and Moment ID.");}
+            catch(Exception ex) {error(ex);}
+        }
     }
     private void chooseImage(JTextField target){JFileChooser c=chooser();if(c.showOpenDialog(this)==JFileChooser.APPROVE_OPTION)target.setText(c.getSelectedFile().getAbsolutePath());}
-    private void viewPosts(){String sql=currentUserId>0?"SELECT * FROM POST WHERE UserID = ? ORDER BY PostedAt DESC":"SELECT * FROM POST ORDER BY PostedAt DESC";StringBuilder text=new StringBuilder();try(Connection c=DBConnection.getConnection();PreparedStatement s=c.prepareStatement(sql)){if(currentUserId>0)s.setInt(1,currentUserId);try(ResultSet r=s.executeQuery()){while(r.next())text.append("Post ").append(r.getInt("PostID")).append("\nFront: ").append(r.getString("FrontCam")).append("\nBack: ").append(r.getString("BackCam")).append("\nCaption: ").append(r.getString("Caption")).append("\n\n");}JTextArea area=new JTextArea(text.length()==0?"No posts found.":text.toString(),16,42);area.setEditable(false);JOptionPane.showMessageDialog(this,new JScrollPane(area),"Posts",JOptionPane.INFORMATION_MESSAGE);}catch(SQLException ex){error(ex);}}
     private void updatePost(){String id=JOptionPane.showInputDialog(this,"Post ID:");if(id==null)return;String caption=JOptionPane.showInputDialog(this,"New caption:");if(caption==null)return;String sql="UPDATE POST SET Caption=? WHERE PostID=?"+(currentUserId>0?" AND UserID=?":"");try(Connection c=DBConnection.getConnection();PreparedStatement s=c.prepareStatement(sql)){s.setString(1,caption);s.setInt(2,Integer.parseInt(id.trim()));if(currentUserId>0)s.setInt(3,currentUserId);message(s.executeUpdate()==1?"Post updated.":"Post not found or not yours.");}catch(Exception ex){error(ex);}}
-    private void deletePost(){String id=JOptionPane.showInputDialog(this,"Post ID to delete:");if(id==null)return;String sql="DELETE FROM POST WHERE PostID=?"+(currentUserId>0?" AND UserID=?":"");try(Connection c=DBConnection.getConnection();PreparedStatement s=c.prepareStatement(sql)){s.setInt(1,Integer.parseInt(id.trim()));if(currentUserId>0)s.setInt(2,currentUserId);message(s.executeUpdate()==1?"Post deleted.":"Post not found or not yours.");}catch(Exception ex){error(ex);}}
+    private void deletePost(){String id=JOptionPane.showInputDialog(this,"Post ID to delete:");if(id==null)return;if(JOptionPane.showConfirmDialog(this,"Delete this BeReal?","Delete BeReal",JOptionPane.YES_NO_OPTION)!=JOptionPane.YES_OPTION)return;String sql="DELETE FROM POST WHERE PostID=?"+(currentUserId>0?" AND UserID=?":"");try(Connection c=DBConnection.getConnection();PreparedStatement s=c.prepareStatement(sql)){s.setInt(1,Integer.parseInt(id.trim()));if(currentUserId>0)s.setInt(2,currentUserId);message(s.executeUpdate()==1?"Post deleted.":"Post not found or not yours.");}catch(Exception ex){error(ex);}}
     private void message(String s){JOptionPane.showMessageDialog(this,s);}private void error(Exception e){JOptionPane.showMessageDialog(this,"Error: "+e.getMessage(),"BeReal",JOptionPane.ERROR_MESSAGE);}public static void main(String[]a){SwingUtilities.invokeLater(()->new PostGUI().setVisible(true));}
 }

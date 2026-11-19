@@ -15,17 +15,18 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
 public class UserManagementGUI extends JFrame {
-    private static final Color BLACK = new Color(24, 24, 24);
-    private static final Color GRAY = new Color(110, 110, 110);
-    private static final Color LIGHT = new Color(246, 246, 246);
-    private static final Color LINE = new Color(220, 220, 220);
+    private static final Color BLACK = Color.WHITE;
+    private static final Color GRAY = BeRealTheme.MUTED;
+    private static final Color LIGHT = BeRealTheme.SURFACE;
+    private static final Color LINE = BeRealTheme.LINE;
     private final CardLayout cards = new CardLayout();
     private final JPanel screens = new JPanel(cards);
     private Integer createdID;
 
     public UserManagementGUI() {
-        setTitle("BeReal. | User Management");
-        setSize(860, 740);
+        BeRealTheme.install();
+        setTitle("BeReal. | Profile");
+        setSize(760, 820);
         setMinimumSize(new Dimension(700, 610));
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -34,9 +35,14 @@ public class UserManagementGUI extends JFrame {
         registration();
     }
 
+    public UserManagementGUI(int userID) {
+        this();
+        profile(userID);
+    }
+
     private JPanel page(String heading, String subtitle) {
         JPanel p = new JPanel(new BorderLayout(0, 22));
-        p.setBackground(Color.WHITE);
+        p.setBackground(Color.BLACK);
         p.setBorder(new EmptyBorder(28, 42, 28, 42));
         JPanel header = new JPanel();
         header.setOpaque(false);
@@ -60,6 +66,8 @@ public class UserManagementGUI extends JFrame {
     }
 
     private void show(String key, JPanel page) {
+        BeRealTheme.apply(page);
+        screens.removeAll();
         screens.add(page, key);
         cards.show(screens, key);
         screens.revalidate();
@@ -67,16 +75,7 @@ public class UserManagementGUI extends JFrame {
     }
 
     private JButton button(String text, boolean primary) {
-        JButton b = new JButton(text);
-        b.setFont(new Font("SansSerif", Font.BOLD, 14));
-        b.setForeground(primary ? Color.WHITE : BLACK);
-        b.setBackground(primary ? BLACK : LIGHT);
-        b.setOpaque(true);
-        b.setFocusPainted(false);
-        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        b.setBorder(new CompoundBorder(new LineBorder(primary ? BLACK : LINE, 1, true),
-                new EmptyBorder(12, 18, 12, 18)));
-        return b;
+        return BeRealTheme.button(text, primary);
     }
 
     private JTextField input() {
@@ -87,7 +86,7 @@ public class UserManagementGUI extends JFrame {
 
     private void style(JComponent c) {
         c.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        c.setBackground(Color.WHITE);
+        c.setBackground(BeRealTheme.SURFACE);
         c.setForeground(BLACK);
         c.setBorder(new CompoundBorder(new LineBorder(LINE, 1, true),
                 new EmptyBorder(11, 12, 11, 12)));
@@ -266,14 +265,14 @@ public class UserManagementGUI extends JFrame {
     }
 
     private void registration() {
-        JPanel p = page("Register User", "Create your account.");
+        JPanel p = page("Create your account.", "Your everyday life. Your real friends.");
         JPanel f = form();
         JTextField email = input(), username = input(), bio = input(), dob = dateInput();
         JPasswordField password = new JPasswordField();
         style(password);
         JComboBox<String> privacy = new JComboBox<>(new String[]{"Public", "Private"});
         privacy.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        privacy.setBackground(Color.WHITE);
+        privacy.setBackground(BeRealTheme.SURFACE);
         JPanel privacyBox = new JPanel(new BorderLayout());
         privacyBox.setOpaque(false);
         privacyBox.setPreferredSize(new Dimension(260, 46));
@@ -581,7 +580,7 @@ public class UserManagementGUI extends JFrame {
         JTextField email = input(), username = input(), bio = input(), dob = dateInput();
         JComboBox<String> privacy = new JComboBox<>(new String[]{"Public", "Private"});
         privacy.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        privacy.setBackground(Color.WHITE);
+        privacy.setBackground(BeRealTheme.SURFACE);
         JPanel privacyBox = new JPanel(new BorderLayout());
         privacyBox.setOpaque(false);
         privacyBox.setPreferredSize(new Dimension(260, 46));

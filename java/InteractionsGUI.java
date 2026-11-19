@@ -21,10 +21,11 @@ public class InteractionsGUI extends JFrame {
     private JTable reactionsTable;
     private JTable tagsTable;
 
-    private final Color BG = new Color(25, 25, 25);
-    private final Color CARD = new Color(45, 45, 45);
+    private final Color BG = Color.BLACK;
+    private final Color CARD = BeRealTheme.SURFACE;
 
     public InteractionsGUI(int userID) {
+        BeRealTheme.install();
         this.currentUserID = userID;
 
         setTitle("BeReal - Interactions");
@@ -35,6 +36,13 @@ public class InteractionsGUI extends JFrame {
 
         buildGUI();
         loadPosts();
+    }
+
+    public InteractionsGUI(int userID, int postID) {
+        this(userID);
+        for (int i=0; i<postBox.getItemCount(); i++) {
+            if (postBox.getItemAt(i).id == postID) { postBox.setSelectedIndex(i); break; }
+        }
     }
 
     private void buildGUI() {
@@ -80,7 +88,7 @@ public class InteractionsGUI extends JFrame {
 
         JTabbedPane tabs = new JTabbedPane();
 
-tabs.setBackground(new Color(45, 45, 45));
+tabs.setBackground(BeRealTheme.SURFACE);
 tabs.setForeground(Color.WHITE);
 tabs.setFont(new Font("Arial", Font.BOLD, 14));
 
@@ -89,12 +97,13 @@ tabs.addTab("Reactions", createReactionsPanel());
 tabs.addTab("Tags", createTagsPanel());
 
 for (int i = 0; i < tabs.getTabCount(); i++) {
-    tabs.setBackgroundAt(i, new Color(45, 45, 45));
+    tabs.setBackgroundAt(i, BeRealTheme.SURFACE);
     tabs.setForegroundAt(i, Color.WHITE);
 }
         content.add(tabs, BorderLayout.CENTER);
 
         main.add(content, BorderLayout.CENTER);
+        BeRealTheme.apply(main);
         setContentPane(main);
     }
 

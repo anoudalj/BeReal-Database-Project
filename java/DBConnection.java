@@ -9,13 +9,10 @@ import java.util.Properties;
 
 public class DBConnection {
 
-    // Set these as environment variables before running, for example:
-    //   DB_URL=jdbc:mysql://127.0.0.1:3306/Bereal
-    //   DB_USER=root
-    //   DB_PASSWORD=your_password
-    private static final String URL = System.getenv("DB_URL");
-    private static final String USER = System.getenv("DB_USER");
-    private static final String PASSWORD = System.getenv("DB_PASSWORD");
+   
+    private static final String URL = "jdbc:mysql://127.0.0.1:3306/Bereal";
+    private static final String USER = "root";
+    private static final String PASSWORD = "095421";
 
     // Both spellings are accepted (dots or underscores in the version number)
     private static final String[] JAR_NAMES = {
@@ -27,10 +24,8 @@ public class DBConnection {
     private static Driver driver; // loaded once and reused
 
     public static Connection getConnection() throws SQLException {
-        if (URL == null || USER == null || PASSWORD == null) {
-            throw new SQLException(
-                "Database settings are missing. Set the environment variables " +
-                "DB_URL, DB_USER and DB_PASSWORD, then restart the program.");
+        if ("YOUR_MYSQL_PASSWORD".equals(PASSWORD)) {
+            throw new SQLException("Enter your MySQL password in DBConnection.java first.");
         }
 
         Properties props = new Properties();
@@ -87,4 +82,5 @@ public class DBConnection {
         return null;
     }
 }
+
 

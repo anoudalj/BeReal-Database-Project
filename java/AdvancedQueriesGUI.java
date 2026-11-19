@@ -30,6 +30,7 @@ public class AdvancedQueriesGUI extends JFrame {
 
     public AdvancedQueriesGUI() {
 
+        BeRealTheme.install();
         loadQueries();
 
         setTitle("BeReal - Advanced Queries");
@@ -44,7 +45,7 @@ public class AdvancedQueriesGUI extends JFrame {
         JLabel title = new JLabel("Advanced Queries");
         title.setFont(new Font("Arial", Font.BOLD, 22));
 
-        JPanel buttonPanel = new JPanel(new GridLayout(1, BUTTON_TITLES.length, 10, 10));
+        JPanel buttonPanel = new JPanel(new GridLayout(2, 3, 10, 10));
 
         for (int i = 0; i < BUTTON_TITLES.length; i++) {
             JButton button = new JButton(BUTTON_TITLES[i]);
@@ -65,6 +66,7 @@ public class AdvancedQueriesGUI extends JFrame {
         mainPanel.add(topPanel, BorderLayout.NORTH);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
 
+        BeRealTheme.apply(mainPanel);
         add(mainPanel);
     }
 
