@@ -7,7 +7,7 @@
 INSERT INTO `USER`
 (Email, Username, Password, Bio, DOB, Account_Type, UserType, JoinDate, ProfilePicture, AccountStatus)
 VALUES
-('tempuser@example.com', 'tempuser03', 'DemoPassword789', 'Temporary demo user', '2005-01-10', 'Public', 'Regular', CURDATE(), NULL, 'Active');
+('tempuser@example.com', 'tempuser03', 'pbkdf2:120000:nBeGq4rDBfOCbWOQmEvc9A==:pLw8OeKIDp+fsbIQ4GJL72bvrUnQtupwrDvsY6Rn3LU=', 'Temporary demo user', '2005-01-10', 'Public', 'Regular', CURDATE(), NULL, 'Active');
 
 -- 2. RETRIEVE: view a user's details
 SELECT UserID, Email, Username, Bio, DOB, Account_Type, UserType, JoinDate, ProfilePicture, AccountStatus
