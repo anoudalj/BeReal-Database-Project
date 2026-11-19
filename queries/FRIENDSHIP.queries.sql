@@ -1,25 +1,19 @@
+-- FRIENDSHIP operations
 
--- FRIENDSHIP Operations
-
--- 1. INSERT: Send a friendship request
-
+-- 1. INSERT: send a friendship request (user 2 -> user 3)
 INSERT INTO FRIENDSHIP
 (Date_Requested, Requester_ID, Receiver_ID, Status)
 VALUES
-(CURRENT_DATE, 3, 2, 'Pending');
+(CURRENT_DATE, 2, 3, 'Pending');
 
-
--- 2. UPDATE: Accept a friendship request
-
+-- 2. UPDATE: accept a friendship request
 UPDATE FRIENDSHIP
 SET Status = 'Accepted',
     ApprovedDate = CURRENT_DATE
 WHERE Friendship_id = 1
-AND Status = 'Pending';
+  AND Status = 'Pending';
 
-
--- 3. JOIN: Retrieve pending friendship requests
-
+-- 3. JOIN: retrieve pending friendship requests with the requester's username
 SELECT F.Friendship_id,
        U.Username AS Requester,
        F.Receiver_ID,
