@@ -1,76 +1,68 @@
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 import javax.swing.*;
 import java.awt.*;
+import java.security.MessageDigest;
+import java.sql.*;
+import java.util.Base64;
 
+/** Starts with authentication and exposes admin-only tools only after role validation. */
 public class Main extends JFrame {
+    private final CardLayout cards = new CardLayout();
+    private final JPanel content = new JPanel(cards);
+    public Main() { setTitle("BeReal"); setSize(480, 420); setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); setLocationRelativeTo(null); setContentPane(content); showWelcome(); }
 
-    public Main() {
-
-        setTitle("BeReal Database System");
-        setSize(500, 480);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null);
-
-        JLabel titleLabel = new JLabel(
-            "BeReal Database Management",
-            SwingConstants.CENTER
-        );
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
-
-        JButton usersButton = new JButton("User Management");
-        JButton postsButton = new JButton("Posts & Moments");
-        JButton friendshipButton = new JButton("Friendships");
-        JButton interactionsButton = new JButton("Interactions");
-        JButton queriesButton = new JButton("Advanced Queries & Admin");
-
-        JPanel buttonPanel = new JPanel(new GridLayout(5, 1, 10, 10));
-        buttonPanel.add(usersButton);
-        buttonPanel.add(postsButton);
-        buttonPanel.add(friendshipButton);
-        buttonPanel.add(interactionsButton);
-        buttonPanel.add(queriesButton);
-
-        JPanel centerPanel = new JPanel(new BorderLayout());
-        centerPanel.setBorder(BorderFactory.createEmptyBorder(30, 80, 30, 80));
-        centerPanel.add(buttonPanel, BorderLayout.CENTER);
-
-        add(titleLabel, BorderLayout.NORTH);
-        add(centerPanel, BorderLayout.CENTER);
-
-        usersButton.addActionListener(e ->
-            new UserManagementGUI().setVisible(true));
-
-        postsButton.addActionListener(e ->
-            new PostGUI().setVisible(true));
-
-        friendshipButton.addActionListener(e ->
-            new FriendshipManagement().setVisible(true));
-
-        interactionsButton.addActionListener(e -> openInteractions());
-
-        queriesButton.addActionListener(e ->
-            new AdvancedQueriesGUI().setVisible(true));
+    private void showWelcome() {
+        JPanel p = page("Welcome to BeReal", "Sign in to continue, or create an account.");
+        JButton create = new JButton("Create Account"), login = new JButton("Login");
+        create.addActionListener(e -> new UserManagementGUI().setVisible(true)); login.addActionListener(e -> showLogin());
+        add(p, create, 0); add(p, login, 1); show("welcome", p);
     }
-
-    // InteractionsGUI needs to know which user is acting, so ask for a User ID first
-    private void openInteractions() {
-        String input = JOptionPane.showInputDialog(this, "Enter your User ID:");
-
-        if (input == null) {
-            return; // cancelled
-        }
-
-        try {
-            int userID = Integer.parseInt(input.trim());
-            if (userID <= 0) {
-                throw new NumberFormatException();
+    private void showLogin() {
+        JPanel p = page("Log in", "The selected role must match the account UserType.");
+        JTextField identity = new JTextField(22); JPasswordField password = new JPasswordField(22);
+        JComboBox<String> role = new JComboBox<>(new String[]{"User", "Admin"});
+        JButton signIn = new JButton("Login"), back = new JButton("Back");
+        form(p, "Username or email", identity, 0); form(p, "Password", password, 1); form(p, "Login as", role, 2);
+        add(p, signIn, 3); add(p, back, 4);
+        signIn.addActionListener(e -> authenticate(identity.getText(), password.getPassword(), (String) role.getSelectedItem()));
+        back.addActionListener(e -> showWelcome()); show("login", p);
+    }
+    private void authenticate(String identity, char[] password, String role) {
+        if (identity.trim().isEmpty() || password.length == 0) { error("Enter your username/email and password."); return; }
+        String sql = "SELECT UserID, Username, Password, UserType FROM `USER` WHERE Username = ? OR Email = ?";
+        try (Connection c = DBConnection.getConnection(); PreparedStatement s = c.prepareStatement(sql)) {
+            s.setString(1, identity.trim()); s.setString(2, identity.trim());
+            try (ResultSet r = s.executeQuery()) {
+                if (!r.next() || !roleMatches(role, r.getString("UserType")) || !verify(password, r.getString("Password"))) { error("Login failed. Check your credentials and selected role."); return; }
+                dashboard(r.getInt("UserID"), r.getString("Username"), role);
             }
-            new InteractionsGUI(userID).setVisible(true);
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Enter a valid positive User ID.");
-        }
+        } catch (SQLException ex) { error("Database error: " + ex.getMessage()); }
+        finally { java.util.Arrays.fill(password, '\0'); }
     }
-
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new Main().setVisible(true));
+    // Supports passwords generated by UserManagementGUI: pbkdf2:iterations:base64Salt:base64Hash.
+    private boolean verify(char[] password, String stored) {
+        try {
+            String[] parts = stored.split(":"); if (parts.length != 4 || !"pbkdf2".equals(parts[0])) return false;
+            PBEKeySpec spec = new PBEKeySpec(password, Base64.getDecoder().decode(parts[2]), Integer.parseInt(parts[1]), 256);
+            byte[] actual = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).getEncoded(); spec.clearPassword();
+            return MessageDigest.isEqual(actual, Base64.getDecoder().decode(parts[3]));
+        } catch (Exception ex) { return false; }
     }
+    // Existing projects commonly call a non-admin account either User or Regular.
+    private boolean roleMatches(String selected, String stored) { return "Admin".equalsIgnoreCase(selected) ? "Admin".equalsIgnoreCase(stored) : ("User".equalsIgnoreCase(stored) || "Regular".equalsIgnoreCase(stored)); }
+    private void dashboard(int userId, String username, String role) {
+        JPanel p = page("Hello, " + username, "Logged in as " + role + ".");
+        JButton posts = new JButton("Posts & Moments"), friends = new JButton("Friendships"), interactions = new JButton("Interactions"), logout = new JButton("Log out");
+        posts.addActionListener(e -> new PostGUI(userId).setVisible(true)); friends.addActionListener(e -> new FriendshipManagement().setVisible(true)); interactions.addActionListener(e -> new InteractionsGUI(userId).setVisible(true));
+        add(p, posts, 0); add(p, friends, 1); add(p, interactions, 2);
+        if ("Admin".equalsIgnoreCase(role)) { JButton queries = new JButton("Advanced Queries"); queries.addActionListener(e -> new AdvancedQueriesGUI().setVisible(true)); add(p, queries, 3); add(p, logout, 4); } else add(p, logout, 3);
+        logout.addActionListener(e -> showWelcome()); show("dashboard", p);
+    }
+    private JPanel page(String title, String subtitle) { JPanel p = new JPanel(new GridBagLayout()); p.setBorder(BorderFactory.createEmptyBorder(28,55,28,55)); GridBagConstraints c=new GridBagConstraints(); c.gridx=0;c.gridy=0;c.insets=new Insets(5,5,18,5);c.fill=GridBagConstraints.HORIZONTAL;JLabel h=new JLabel(title,SwingConstants.CENTER);h.setFont(new Font("SansSerif",Font.BOLD,25));p.add(h,c);c.gridy=1;c.insets=new Insets(0,5,22,5);p.add(new JLabel(subtitle,SwingConstants.CENTER),c);return p; }
+    private void add(JPanel p,JComponent x,int row){GridBagConstraints c=new GridBagConstraints();c.gridx=0;c.gridy=row+5;c.fill=GridBagConstraints.HORIZONTAL;c.insets=new Insets(6,5,6,5);p.add(x,c);}
+    private void form(JPanel p,String label,JComponent field,int row){GridBagConstraints c=new GridBagConstraints();c.gridx=0;c.gridy=row*2+2;c.anchor=GridBagConstraints.WEST;c.insets=new Insets(5,5,0,5);p.add(new JLabel(label),c);c.gridy++;c.fill=GridBagConstraints.HORIZONTAL;c.insets=new Insets(0,5,8,5);p.add(field,c);}
+    private void show(String name,JPanel p){content.add(p,name);cards.show(content,name);content.revalidate();}
+    private void error(String text){JOptionPane.showMessageDialog(this,text,"BeReal",JOptionPane.ERROR_MESSAGE);}
+    public static void main(String[] args){SwingUtilities.invokeLater(() -> new Main().setVisible(true));}
 }
