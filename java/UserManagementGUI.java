@@ -346,9 +346,10 @@ public class UserManagementGUI extends JFrame {
                     if (date.isEmpty()) st.setNull(5, Types.DATE);
                     else st.setDate(5, java.sql.Date.valueOf(date));
                     st.setString(6, privacy.getSelectedItem().toString());
-                    st.setString(7, "regular");
-                    st.setString(8, photoPath[0]);
-                    st.setString(9, "active");
+                    st.setString(7, "Regular");
+                    if (photoPath[0] == null || photoPath[0].isEmpty()) st.setNull(8, Types.VARCHAR);
+                    else st.setString(8, photoPath[0]);
+                    st.setString(9, "Active");
                     st.setDate(10, java.sql.Date.valueOf(LocalDate.now()));
                     st.executeUpdate();
                     try (ResultSet keys = st.getGeneratedKeys()) {
@@ -651,7 +652,8 @@ public class UserManagementGUI extends JFrame {
                 if (date.isEmpty()) st.setNull(4, Types.DATE);
                 else st.setDate(4, java.sql.Date.valueOf(date));
                 st.setString(5, privacy.getSelectedItem().toString());
-                st.setString(6, photoPath[0]);
+                if (photoPath[0] == null || photoPath[0].isEmpty()) st.setNull(6, Types.VARCHAR);
+                else st.setString(6, photoPath[0]);
                 st.setInt(7, userID);
                 if (st.executeUpdate() > 0) { message("Changes saved!"); profile(userID); }
                 else error("User ID not found.");
