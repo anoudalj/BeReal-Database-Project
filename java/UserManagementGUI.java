@@ -23,7 +23,22 @@ public class UserManagementGUI extends JFrame {
     private final JPanel screens = new JPanel(cards);
     private Integer createdID;
 
+    // Set only by Main after a successful login. Registration has no signed-in user.
+    private final Integer authenticatedUserId;
+
     public UserManagementGUI() {
+        this((Integer) null);
+    }
+
+    public UserManagementGUI(int userID) {
+        this(Integer.valueOf(userID));
+    }
+
+    private UserManagementGUI(Integer userID) {
+        if (userID != null && userID <= 0) {
+            throw new IllegalArgumentException("A valid signed-in User ID is required.");
+        }
+        authenticatedUserId = userID;
         BeRealTheme.install();
         setTitle("BeReal. | Profile");
         setSize(760, 820);
@@ -31,13 +46,15 @@ public class UserManagementGUI extends JFrame {
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setContentPane(screens);
-        // This window is reached from the welcome screen's Create Account action.
-        registration();
+        if (authenticatedUserId == null) registration();
+        else profile();
     }
 
-    public UserManagementGUI(int userID) {
-        this();
-        profile(userID);
+    private int requireAuthenticatedUserId() {
+        if (authenticatedUserId == null) {
+            throw new IllegalStateException("Log in before viewing or editing a profile.");
+        }
+        return authenticatedUserId;
     }
 
     private JPanel page(String heading, String subtitle) {
@@ -115,11 +132,11 @@ public class UserManagementGUI extends JFrame {
         f.add(component, c);
     }
 
-    private JPanel footer(JButton action) {
+    private JPanel footer(JButton action, Runnable onBack) {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         p.setOpaque(false);
         JButton back = button("Back", false);
-        back.addActionListener(e -> dashboard());
+        back.addActionListener(e -> onBack.run());
         p.add(back);
         if (action != null) p.add(action);
         return p;
@@ -131,15 +148,6 @@ public class UserManagementGUI extends JFrame {
 
     private void message(String text) {
         JOptionPane.showMessageDialog(this, text, "BeReal.", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    private Integer id(String text) {
-        try {
-            int number = Integer.parseInt(text.trim());
-            return number > 0 ? number : null;
-        } catch (NumberFormatException ex) {
-            return null;
-        }
     }
 
     private boolean validEmail(String value) {
@@ -237,31 +245,6 @@ public class UserManagementGUI extends JFrame {
             }
             g.dispose();
         }
-    }
-
-    private void dashboard() {
-        JPanel p = page("User Management", "Manage your accounts.");
-        JPanel center = new JPanel(new GridBagLayout());
-        center.setOpaque(false);
-        JPanel menu = new JPanel();
-        menu.setOpaque(false);
-        menu.setLayout(new BoxLayout(menu, BoxLayout.Y_AXIS));
-        menu.setPreferredSize(new Dimension(410, 265));
-        JButton register = button("Register User", true);
-        JButton update = button("Update User", false);
-        JButton retrieve = button("View User", false);
-        for (JButton b : new JButton[]{register, update, retrieve}) {
-            b.setAlignmentX(Component.CENTER_ALIGNMENT);
-            b.setMaximumSize(new Dimension(410, 54));
-            menu.add(b);
-            menu.add(Box.createVerticalStrut(17));
-        }
-        register.addActionListener(e -> registration());
-        update.addActionListener(e -> findUser(true));
-        retrieve.addActionListener(e -> findUser(false));
-        center.add(menu);
-        p.add(center, BorderLayout.CENTER);
-        show("dashboard", p);
     }
 
     private void registration() {
@@ -365,12 +348,12 @@ public class UserManagementGUI extends JFrame {
         scroll.setBorder(null);
         scroll.getVerticalScrollBar().setUnitIncrement(16);
         p.add(scroll, BorderLayout.CENTER);
-        p.add(footer(save), BorderLayout.SOUTH);
+        p.add(footer(save, this::dispose), BorderLayout.SOUTH);
         show("register", p);
     }
 
     private void confirmation() {
-        if (createdID == null) { dashboard(); return; }
+        if (createdID == null) { dispose(); return; }
         JPanel p = page("Account created!", "Your account is ready to use.");
         JPanel center = new JPanel(new GridBagLayout());
         center.setOpaque(false);
@@ -393,146 +376,15 @@ public class UserManagementGUI extends JFrame {
         } catch (SQLException ex) { error("Unable to load account details: " + ex.getMessage()); }
         center.add(details);
         p.add(center, BorderLayout.CENTER);
-        JButton view = button("View profile", true);
-        view.addActionListener(e -> profile(createdID));
-        p.add(footer(view), BorderLayout.SOUTH);
+        JButton login = button("Return to login", true);
+        login.addActionListener(e -> dispose());
+        p.add(footer(login, this::dispose), BorderLayout.SOUTH);
         show("confirmation", p);
     }
 
-    private void findUser(boolean edit) {
-        JPanel p = page(edit ? "Update User" : "View User",
-                "Find an account using its username, email, or User ID.");
-        JPanel center = new JPanel(new GridBagLayout());
-        center.setOpaque(false);
-        JPanel searchPanel = new JPanel();
-        searchPanel.setOpaque(false);
-        searchPanel.setLayout(new BoxLayout(searchPanel, BoxLayout.Y_AXIS));
-        searchPanel.setPreferredSize(new Dimension(470, 360));
-
-        JLabel prompt = new JLabel("Username, email, or User ID");
-        prompt.setFont(new Font("SansSerif", Font.BOLD, 13));
-        prompt.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JTextField searchText = input();
-        searchText.setAlignmentX(Component.LEFT_ALIGNMENT);
-        searchText.setMinimumSize(new Dimension(470, 46));
-        searchText.setMaximumSize(new Dimension(470, 46));
-        searchText.setPreferredSize(new Dimension(470, 46));
-        JButton search = button("Search", true);
-        search.setAlignmentX(Component.LEFT_ALIGNMENT);
-        search.setMinimumSize(new Dimension(470, 48));
-        search.setPreferredSize(new Dimension(470, 48));
-        search.setMaximumSize(new Dimension(470, 48));
-
-        searchPanel.add(prompt);
-        searchPanel.add(Box.createVerticalStrut(10));
-        searchPanel.add(searchText);
-        searchPanel.add(Box.createVerticalStrut(12));
-        searchPanel.add(search);
-        searchPanel.add(Box.createVerticalStrut(22));
-
-        JLabel existing = new JLabel("Or choose an account");
-        existing.setFont(new Font("SansSerif", Font.BOLD, 13));
-        existing.setAlignmentX(Component.LEFT_ALIGNMENT);
-        searchPanel.add(existing);
-        searchPanel.add(Box.createVerticalStrut(10));
-
-        DefaultListModel<UserChoice> model = new DefaultListModel<>();
-        JList<UserChoice> accounts = new JList<>(model);
-        accounts.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        accounts.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        accounts.setFixedCellHeight(35);
-        JScrollPane listScroll = new JScrollPane(accounts);
-        listScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
-        listScroll.setMinimumSize(new Dimension(470, 150));
-        listScroll.setPreferredSize(new Dimension(470, 150));
-        listScroll.setMaximumSize(new Dimension(470, 150));
-        listScroll.setBorder(new LineBorder(LINE));
-        searchPanel.add(listScroll);
-
-        JButton open = button(edit ? "Edit selected user" : "View selected user", false);
-        open.setAlignmentX(Component.LEFT_ALIGNMENT);
-        open.setMinimumSize(new Dimension(470, 48));
-        open.setPreferredSize(new Dimension(470, 48));
-        open.setMaximumSize(new Dimension(470, 48));
-        searchPanel.add(Box.createVerticalStrut(12));
-        searchPanel.add(open);
-
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement st = con.prepareStatement(
-                     "SELECT UserID, Username FROM `USER` ORDER BY Username, UserID");
-             ResultSet rs = st.executeQuery()) {
-            while (rs.next()) {
-                model.addElement(new UserChoice(rs.getInt("UserID"), rs.getString("Username")));
-            }
-        } catch (SQLException ex) {
-            error("Unable to load accounts: " + ex.getMessage());
-        }
-
-        Runnable searchAction = () -> {
-            String query = searchText.getText().trim();
-            if (query.isEmpty()) {
-                error("Enter a username, email, or User ID.");
-                return;
-            }
-            String sql = "SELECT UserID FROM `USER` WHERE Username = ? OR Email = ?";
-            Integer number = id(query);
-            if (number != null) sql += " OR UserID = ?";
-            sql += " ORDER BY UserID LIMIT 1";
-            try (Connection con = DBConnection.getConnection();
-                 PreparedStatement st = con.prepareStatement(sql)) {
-                st.setString(1, query);
-                st.setString(2, query);
-                if (number != null) st.setInt(3, number);
-                try (ResultSet rs = st.executeQuery()) {
-                    if (!rs.next()) {
-                        error("No account found. Check your search and try again.");
-                        return;
-                    }
-                    int foundID = rs.getInt("UserID");
-                    if (edit) editUser(foundID);
-                    else profile(foundID);
-                }
-            } catch (SQLException ex) {
-                error("Search failed: " + ex.getMessage());
-            }
-        };
-        search.addActionListener(e -> searchAction.run());
-        searchText.addActionListener(e -> searchAction.run());
-        open.addActionListener(e -> {
-            UserChoice selected = accounts.getSelectedValue();
-            if (selected == null) {
-                error("Choose an account from the list first.");
-                return;
-            }
-            if (edit) editUser(selected.userID);
-            else profile(selected.userID);
-        });
-        accounts.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override public void mouseClicked(java.awt.event.MouseEvent e) {
-                if (e.getClickCount() == 2) open.doClick();
-            }
-        });
-
-        center.add(searchPanel);
-        p.add(center, BorderLayout.CENTER);
-        p.add(footer(null), BorderLayout.SOUTH);
-        show(edit ? "findEdit" : "findView", p);
-    }
-
-    private static class UserChoice {
-        final int userID;
-        final String username;
-        UserChoice(int userID, String username) {
-            this.userID = userID;
-            this.username = username;
-        }
-        @Override public String toString() {
-            return "@" + username + "   ·   ID " + userID;
-        }
-    }
-
-    private void profile(int userID) {
-        JPanel p = page("User Profile", "Account information");
+    private void profile() {
+        final int userID = requireAuthenticatedUserId();
+        JPanel p = page("My profile", "Your account information");
         JPanel card = new JPanel(new BorderLayout(0, 18));
         card.setBackground(LIGHT);
         card.setBorder(new EmptyBorder(25, 25, 25, 25));
@@ -568,14 +420,15 @@ public class UserManagementGUI extends JFrame {
         JScrollPane scroll = new JScrollPane(card);
         scroll.setBorder(null);
         p.add(scroll, BorderLayout.CENTER);
-        JButton edit = button("Edit user", true);
-        edit.addActionListener(e -> editUser(userID));
-        p.add(footer(edit), BorderLayout.SOUTH);
+        JButton edit = button("Edit my profile", true);
+        edit.addActionListener(e -> editUser());
+        p.add(footer(edit, this::dispose), BorderLayout.SOUTH);
         show("profile", p);
     }
 
-    private void editUser(int userID) {
-        JPanel p = page("Update User", "Edit account information.");
+    private void editUser() {
+        final int userID = requireAuthenticatedUserId();
+        JPanel p = page("Edit my profile", "Update your account information.");
         JPanel f = form();
         JTextField email = input(), username = input(), bio = input(), dob = dateInput();
         JComboBox<String> privacy = new JComboBox<>(new String[]{"Public", "Private"});
@@ -655,7 +508,7 @@ public class UserManagementGUI extends JFrame {
                 if (photoPath[0] == null || photoPath[0].isEmpty()) st.setNull(6, Types.VARCHAR);
                 else st.setString(6, photoPath[0]);
                 st.setInt(7, userID);
-                if (st.executeUpdate() > 0) { message("Changes saved!"); profile(userID); }
+                if (st.executeUpdate() > 0) { message("Changes saved!"); profile(); }
                 else error("User ID not found.");
             } catch (SQLException ex) { error("Update failed: " + ex.getMessage()); }
         });
@@ -663,7 +516,7 @@ public class UserManagementGUI extends JFrame {
         scroll.setBorder(null);
         scroll.getVerticalScrollBar().setUnitIncrement(16);
         p.add(scroll, BorderLayout.CENTER);
-        p.add(footer(save), BorderLayout.SOUTH);
+        p.add(footer(save, this::profile), BorderLayout.SOUTH);
         show("edit", p);
     }
 
