@@ -13,12 +13,6 @@ import javax.swing.table.DefaultTableModel;
 
 public class AdvancedQueriesGUI extends JFrame {
 
-    // Looks for the SQL file from the project folder or from the java folder
-    private static final String[] QUERY_FILE_CANDIDATES = {
-        "queries/AdvancedQueries.sql",
-        "../queries/AdvancedQueries.sql"
-    };
-
     // Button labels, in the same order as the queries in AdvancedQueries.sql
     private static final String[] BUTTON_TITLES = {
         "Pending Friend Requests",
