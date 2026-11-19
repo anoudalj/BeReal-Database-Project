@@ -1,4 +1,3 @@
-
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
@@ -50,7 +49,7 @@ public class InteractionsGUI extends JFrame {
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(BG);
 
-        JLabel logo = new JLabel("no l .");
+        JLabel logo = new JLabel("BeReal.");
         logo.setFont(new Font("Arial", Font.BOLD, 30));
         logo.setForeground(Color.WHITE);
 
@@ -294,8 +293,17 @@ for (int i = 0; i < tabs.getTabCount(); i++) {
     }
 
     private void error(Exception e) {
+        String msg;
+        if (e instanceof NumberFormatException) {
+            msg = "Please enter a valid number.";
+        } else if (e instanceof SQLIntegrityConstraintViolationException) {
+            msg = "That user, post or RealMoji does not exist, " +
+                  "or this entry already exists.";
+        } else {
+            msg = e.getMessage();
+        }
         JOptionPane.showMessageDialog(
-            this, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE
+            this, msg, "Error", JOptionPane.ERROR_MESSAGE
         );
     }
 
