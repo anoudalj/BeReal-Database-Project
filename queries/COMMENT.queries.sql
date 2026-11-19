@@ -1,20 +1,19 @@
--- comment operations
--- 1 insert: add a comment to post 
+-- COMMENT operations (post 2 already has comment number 1 from user 3)
+
+-- 1. INSERT: add a comment to post 2
 INSERT INTO COMMENT
 (PostID, CommentNumber, Content, TimePosted, UserID)
 VALUES
-(2, 1, 'Nice BeReal!', NOW(), 2);
+(2, 2, 'Nice BeReal!', NOW(), 2);
 
--- 2 delete: remove a comment 
-DELETE FROM COMMENT
-WHERE PostID = 2
-  AND CommentNumber = 1
-  AND UserID = 2;
--- 3 retrive comments on a post
-
+-- 2. RETRIEVE: view the comments on a post
 SELECT CommentNumber, Content, TimePosted, UserID
 FROM COMMENT
 WHERE PostID = 2
 ORDER BY TimePosted ASC;
-  
-  
+
+-- 3. DELETE: remove a comment (only by its author)
+DELETE FROM COMMENT
+WHERE PostID = 2
+  AND CommentNumber = 2
+  AND UserID = 2;
