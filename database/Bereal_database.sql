@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS `POST` (
 
 -- Dumping data for table Bereal.POST: ~1 rows (approximately)
 INSERT INTO `POST` (`PostID`, `FrontCam`, `BackCam`, `Caption`, `RetakeCount`, `HoursLate`, `PostedAt`, `UserID`, `MomentID`) VALUES
-	(2, 'front2.jpg', 'back2.jpg', 'Second BeReal', 0, 0.00, '2026-11-12 21:35:00', 3, 2);
+	(2, 'images/front2.jpg', 'images/back2.jpg', 'Second BeReal', 0, 0.00, '2026-11-12 21:35:00', 3, 2);
 
 -- Dumping structure for table Bereal.REACTS_WITH
 CREATE TABLE IF NOT EXISTS `REACTS_WITH` (
@@ -154,10 +154,11 @@ CREATE TABLE IF NOT EXISTS `USER` (
   UNIQUE KEY `Username` (`Username`)
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Dumping data for table Bereal.USER: ~2 rows (approximately)
+-- Dumping data for table Bereal.USER: ~3 rows (approximately)
 INSERT INTO `USER` (`UserID`, `Email`, `Username`, `Password`, `Bio`, `DOB`, `Account_Type`, `UserType`, `JoinDate`, `ProfilePicture`, `AccountStatus`) VALUES
 	(2, 'testuser@example.com', 'testuser01', 'pbkdf2:120000:9H8JscW348gLapV0WpyH5Q==:uAh/w+ir4aQqx9Bg6NZR1bIT8zeTTyMafPC+ZxkrwJ0=', 'Testing user registration', '2004-05-15', 'Public', 'Regular', '2026-11-15', NULL, 'Active'),
-	(3, 'seconduser@example.com', 'seconduser02', 'pbkdf2:120000:5jNI42Izwvyil0Z40oftaw==:RiW7FPfQAounlzq/o+MXUf5+MQv390ZuR2b1pMVui7U=', 'Enjoying BeReal', '2003-08-20', 'Public', 'Regular', '2026-11-15', NULL, 'Active');
+	(3, 'seconduser@example.com', 'seconduser02', 'pbkdf2:120000:5jNI42Izwvyil0Z40oftaw==:RiW7FPfQAounlzq/o+MXUf5+MQv390ZuR2b1pMVui7U=', 'Enjoying BeReal', '2003-08-20', 'Public', 'Regular', '2026-11-15', NULL, 'Active'),
+	(4, 'admin@example.com', 'admin01', 'pbkdf2:120000:ZiNYd2zy375emE01HRXoEg==:gNaSIo69mQD93RUTZHDPHIjxw+DqWgHiGuuDsVO4qWE=', 'Admin account', '2000-01-01', 'Public', 'Admin', '2026-11-15', NULL, 'Active');
 
 /*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
