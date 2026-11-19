@@ -36,8 +36,7 @@ public class PostGUI extends JFrame {
         JTextField front=new JTextField(), back=new JTextField(), caption=new JTextField(),
             retakes=new JTextField("0"), late=new JTextField("0"),
             posted=new JTextField(java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))),
-            moment=new JTextField();
-        BeRealTheme.DualPhoto preview=new BeRealTheme.DualPhoto(null,null,"Choose your two photos");
+            moment=new JTextField(latestMomentId());        BeRealTheme.DualPhoto preview=new BeRealTheme.DualPhoto(null,null,"Choose your two photos");
         preview.setPreferredSize(new Dimension(350,360));
         JButton frontPick=BeRealTheme.button("Front photo",false),backPick=BeRealTheme.button("Back photo",false);
         frontPick.addActionListener(e->{chooseImage(front);preview.setPhotos(back.getText(),front.getText());});
@@ -70,6 +69,12 @@ public class PostGUI extends JFrame {
             } catch(NumberFormatException ex) {message("Enter valid numbers for retakes, hours late, and Moment ID.");}
             catch(Exception ex) {error(ex);}
         }
+    }
+        private String latestMomentId() {
+        String sql="SELECT MomentID FROM MOMENT ORDER BY `Date` DESC, `Time` DESC LIMIT 1";
+        try(Connection c=DBConnection.getConnection();PreparedStatement s=c.prepareStatement(sql);ResultSet r=s.executeQuery()) {
+            return r.next()?String.valueOf(r.getInt(1)):"";
+        } catch(Exception ex) { return ""; }
     }
     private void chooseImage(JTextField target){JFileChooser c=chooser();if(c.showOpenDialog(this)==JFileChooser.APPROVE_OPTION)target.setText(c.getSelectedFile().getAbsolutePath());}
     private void updatePost(){String id=JOptionPane.showInputDialog(this,"Post ID:");if(id==null)return;String caption=JOptionPane.showInputDialog(this,"New caption:");if(caption==null)return;String sql="UPDATE POST SET Caption=? WHERE PostID=?"+(currentUserId>0?" AND UserID=?":"");try(Connection c=DBConnection.getConnection();PreparedStatement s=c.prepareStatement(sql)){s.setString(1,caption);s.setInt(2,Integer.parseInt(id.trim()));if(currentUserId>0)s.setInt(3,currentUserId);message(s.executeUpdate()==1?"Post updated.":"Post not found or not yours.");}catch(Exception ex){error(ex);}}
