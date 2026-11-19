@@ -4,7 +4,6 @@ import java.awt.*;
 import java.sql.*;
 
 public class FriendshipManagement extends JFrame {
-    private final int currentUserId;
     private final JTextField requesterField = new JTextField(10);
     private final JTextField receiverField = new JTextField(10);
     private final JTextField friendshipField = new JTextField(10);
@@ -13,17 +12,15 @@ public class FriendshipManagement extends JFrame {
             new Object[]{"Friendship ID", "Requester", "Receiver ID", "Date Requested"}, 0) {
         @Override public boolean isCellEditable(int row, int column) { return false; }
     };
+
     public FriendshipManagement(int userId) {
         this();
         requesterField.setText(String.valueOf(userId));
         acceptingReceiverField.setText(String.valueOf(userId));
     }
-    public FriendshipManagement() { this(-1); }
 
-    public FriendshipManagement(int userId) {
+    public FriendshipManagement() {
         super("BeReal - Friendship Management");
-        BeRealTheme.install();
-        currentUserId = userId;
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(800, 550);
         setLocationRelativeTo(null);
@@ -32,7 +29,7 @@ public class FriendshipManagement extends JFrame {
         root.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
         setContentPane(root);
 
-        JLabel title = new JLabel("BeReal.   /   Friends");
+        JLabel title = new JLabel("BeReal | Friendship Management");
         title.setFont(title.getFont().deriveFont(Font.BOLD, 22f));
         root.add(title, BorderLayout.NORTH);
 
@@ -62,7 +59,7 @@ public class FriendshipManagement extends JFrame {
 
         JPanel bottom = new JPanel(new BorderLayout(8, 8));
         JPanel heading = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        heading.add(new JLabel(userId > 0 ? "Your pending requests" : "Pending requests"));
+        heading.add(new JLabel("Pending Friendship Requests (Admin View)"));
         JButton refreshButton = new JButton("Refresh Pending Requests");
         refreshButton.addActionListener(e -> loadPendingRequests());
         heading.add(refreshButton);
@@ -72,12 +69,6 @@ public class FriendshipManagement extends JFrame {
         bottom.add(new JScrollPane(table), BorderLayout.CENTER);
         bottom.setPreferredSize(new Dimension(750, 210));
         root.add(bottom, BorderLayout.SOUTH);
-        BeRealTheme.apply(root);
-        if (userId > 0) {
-            requesterField.setText(String.valueOf(userId)); requesterField.setEditable(false);
-            acceptingReceiverField.setText(String.valueOf(userId)); acceptingReceiverField.setEditable(false);
-        }
-
     }
 
     private int parseId(JTextField field, String label) {
@@ -166,20 +157,16 @@ public class FriendshipManagement extends JFrame {
         String sql = "SELECT F.Friendship_id, U.Username AS Requester, " +
                 "F.Receiver_ID, F.Date_Requested " +
                 "FROM FRIENDSHIP F JOIN `USER` U ON F.Requester_ID = U.UserID " +
-                "WHERE F.Status = 'Pending' " + (currentUserId > 0 ? "AND F.Receiver_ID = ? " : "") +
-                "ORDER BY F.Date_Requested DESC, F.Friendship_id DESC";
+                "WHERE F.Status = 'Pending' ORDER BY F.Date_Requested DESC, F.Friendship_id DESC";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
-             ) {
-            if (currentUserId > 0) stmt.setInt(1, currentUserId);
-            try (ResultSet rs = stmt.executeQuery()) {
+             ResultSet rs = stmt.executeQuery()) {
             tableModel.setRowCount(0);
             while (rs.next()) {
                 tableModel.addRow(new Object[]{
                         rs.getInt("Friendship_id"), rs.getString("Requester"),
                         rs.getInt("Receiver_ID"), rs.getDate("Date_Requested")
                 });
-            }
             }
         } catch (SQLException ex) {
             showDatabaseError(ex);
