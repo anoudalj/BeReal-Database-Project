@@ -36,7 +36,8 @@ public class PostGUI extends JFrame {
         JTextField front=new JTextField(), back=new JTextField(), caption=new JTextField(),
             retakes=new JTextField("0"), late=new JTextField("0"),
             posted=new JTextField(java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))),
-            moment=new JTextField(latestMomentId());        BeRealTheme.DualPhoto preview=new BeRealTheme.DualPhoto(null,null,"Choose your two photos");
+            moment=new JTextField(latestMomentId());
+        BeRealTheme.DualPhoto preview=new BeRealTheme.DualPhoto(null,null,"Choose your two photos");
         preview.setPreferredSize(new Dimension(350,360));
         JButton frontPick=BeRealTheme.button("Front photo",false),backPick=BeRealTheme.button("Back photo",false);
         frontPick.addActionListener(e->{chooseImage(front);preview.setPhotos(back.getText(),front.getText());});
@@ -62,7 +63,7 @@ public class PostGUI extends JFrame {
                 if(owner<=0) {String id=JOptionPane.showInputDialog(this,"User ID:");if(id==null)return;owner=Integer.parseInt(id.trim());if(owner<=0)throw new IllegalArgumentException("Enter a positive User ID.");}
                 String sql="INSERT INTO POST (FrontCam, BackCam, Caption, RetakeCount, HoursLate, PostedAt, UserID, MomentID) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
                 try(Connection c=DBConnection.getConnection();PreparedStatement st=c.prepareStatement(sql)) {
-                    st.setString(1,front.getText().trim());st.setString(2,back.getText().trim());st.setString(3,caption.getText());
+                    st.setString(1,saveToImages(front.getText().trim()));st.setString(2,saveToImages(back.getText().trim()));st.setString(3,caption.getText());
                     st.setInt(4,n);st.setDouble(5,hours);st.setTimestamp(6,timestamp);st.setInt(7,owner);st.setInt(8,m);st.executeUpdate();
                 }
                 message("BeReal shared.");refreshFeed((JPanel)getContentPane());return;
@@ -70,11 +71,20 @@ public class PostGUI extends JFrame {
             catch(Exception ex) {error(ex);}
         }
     }
-        private String latestMomentId() {
+    // Pre-fill the Moment ID with the most recent moment so users don't have to look it up.
+    private String latestMomentId() {
         String sql="SELECT MomentID FROM MOMENT ORDER BY `Date` DESC, `Time` DESC LIMIT 1";
         try(Connection c=DBConnection.getConnection();PreparedStatement s=c.prepareStatement(sql);ResultSet r=s.executeQuery()) {
             return r.next()?String.valueOf(r.getInt(1)):"";
         } catch(Exception ex) { return ""; }
+    }
+    // Copies the chosen photo into the images folder and returns a relative path,
+    // so posts still show their photos on other computers.
+    private String saveToImages(String path) throws java.io.IOException {
+        File src=new File(path); File dir=new File("images"); dir.mkdirs();
+        File dest=new File(dir, System.currentTimeMillis()+"_"+src.getName());
+        java.nio.file.Files.copy(src.toPath(), dest.toPath());
+        return "images/"+dest.getName();
     }
     private void chooseImage(JTextField target){JFileChooser c=chooser();if(c.showOpenDialog(this)==JFileChooser.APPROVE_OPTION)target.setText(c.getSelectedFile().getAbsolutePath());}
     private void updatePost(){String id=JOptionPane.showInputDialog(this,"Post ID:");if(id==null)return;String caption=JOptionPane.showInputDialog(this,"New caption:");if(caption==null)return;String sql="UPDATE POST SET Caption=? WHERE PostID=?"+(currentUserId>0?" AND UserID=?":"");try(Connection c=DBConnection.getConnection();PreparedStatement s=c.prepareStatement(sql)){s.setString(1,caption);s.setInt(2,Integer.parseInt(id.trim()));if(currentUserId>0)s.setInt(3,currentUserId);message(s.executeUpdate()==1?"Post updated.":"Post not found or not yours.");}catch(Exception ex){error(ex);}}
