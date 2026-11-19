@@ -1,17 +1,19 @@
--- Retrieve all moments
-SELECT * FROM MOMENT;
+-- MOMENT operations (moment 2 is used by post 2, so it is left untouched)
 
--- Update a moment time
-UPDATE MOMENT
-SET Time = '21:15:00'
-WHERE MomentID = 1;
-
--- Insert a new moment
+-- 1. INSERT: add a new moment
 INSERT INTO MOMENT
 (MomentID, Time, TimeZone, Date)
 VALUES
-(2, '22:00:00', 'Asia/Riyadh', '2026-11-13');
+(3, '21:00:00', 'Asia/Riyadh', '2026-11-14');
 
--- Delete a moment
+-- 2. UPDATE: change the time of the new moment
+UPDATE MOMENT
+SET Time = '21:15:00'
+WHERE MomentID = 3;
+
+-- 3. RETRIEVE: view all moments
+SELECT * FROM MOMENT;
+
+-- 4. DELETE: remove the new moment (no post uses it)
 DELETE FROM MOMENT
-WHERE MomentID = 2;
+WHERE MomentID = 3;
