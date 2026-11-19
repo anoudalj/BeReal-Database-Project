@@ -6,7 +6,7 @@
 INSERT INTO `USER`
 (Email, Username, Password, Bio, DOB, Account_Type, UserType, JoinDate, ProfilePicture, AccountStatus)
 VALUES
-('spam@example.com', 'spammer99', 'pbkdf2:120000:ODpg/TAW/qiDcA9ImLFhsw==:ErCSjcV1hOh2Vdfx1lSpIHdsc39ENCwMy1dyTQaf4F0='', 'Follow me', '1985-03-10', 'Public', 'Regular', CURDATE(), NULL, 'UnderReview');
+('spam@example.com', 'spammer99', 'pbkdf2:120000:ODpg/TAW/qiDcA9ImLFhsw==:ErCSjcV1hOh2Vdfx1lSpIHdsc39ENCwMy1dyTQaf4F0=', 'Follow me', '1985-03-10', 'Public', 'Regular', CURDATE(), NULL, 'UnderReview');
 
 INSERT INTO POST
 (FrontCam, BackCam, Caption, RetakeCount, HoursLate, PostedAt, UserID, MomentID)
