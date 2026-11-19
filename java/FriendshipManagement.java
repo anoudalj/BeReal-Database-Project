@@ -13,7 +13,11 @@ public class FriendshipManagement extends JFrame {
             new Object[]{"Friendship ID", "Requester", "Receiver ID", "Date Requested"}, 0) {
         @Override public boolean isCellEditable(int row, int column) { return false; }
     };
-
+    public FriendshipManagement(int userId) {
+        this();
+        requesterField.setText(String.valueOf(userId));
+        acceptingReceiverField.setText(String.valueOf(userId));
+    }
     public FriendshipManagement() { this(-1); }
 
     public FriendshipManagement(int userId) {
