@@ -30,7 +30,8 @@ public class UserManagementGUI extends JFrame {
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setContentPane(screens);
-        dashboard();
+        // This window is reached from the welcome screen's Create Account action.
+        registration();
     }
 
     private JPanel page(String heading, String subtitle) {
@@ -671,3 +672,4 @@ public class UserManagementGUI extends JFrame {
         SwingUtilities.invokeLater(() -> new UserManagementGUI().setVisible(true));
     }
 }
+
