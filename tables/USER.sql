@@ -1,3 +1,6 @@
+-- Table: USER
+-- Create order (foreign keys): USER, MOMENT, POST, FRIENDSHIP, COMMENT, REALMOJIS, REACTS_WITH, TAGGED_ON
+
 CREATE TABLE `USER` (
   `UserID` int NOT NULL AUTO_INCREMENT,
   `Email` varchar(255) NOT NULL,
@@ -13,4 +16,4 @@ CREATE TABLE `USER` (
   PRIMARY KEY (`UserID`),
   UNIQUE KEY `Email` (`Email`),
   UNIQUE KEY `Username` (`Username`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
