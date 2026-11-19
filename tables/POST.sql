@@ -1,4 +1,7 @@
-CREATE TABLE `post` (
+-- Table: POST
+-- Create order (foreign keys): USER, MOMENT, POST, FRIENDSHIP, COMMENT, REALMOJIS, REACTS_WITH, TAGGED_ON
+
+CREATE TABLE `POST` (
   `PostID` int NOT NULL AUTO_INCREMENT,
   `FrontCam` varchar(255) NOT NULL,
   `BackCam` varchar(255) NOT NULL,
@@ -11,6 +14,6 @@ CREATE TABLE `post` (
   PRIMARY KEY (`PostID`),
   KEY `fk_post_user` (`UserID`),
   KEY `fk_post_moment` (`MomentID`),
-  CONSTRAINT `fk_post_moment` FOREIGN KEY (`MomentID`) REFERENCES `moment` (`MomentID`),
-  CONSTRAINT `fk_post_user` FOREIGN KEY (`UserID`) REFERENCES `user` (`UserID`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+  CONSTRAINT `fk_post_moment` FOREIGN KEY (`MomentID`) REFERENCES `MOMENT` (`MomentID`),
+  CONSTRAINT `fk_post_user` FOREIGN KEY (`UserID`) REFERENCES `USER` (`UserID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
