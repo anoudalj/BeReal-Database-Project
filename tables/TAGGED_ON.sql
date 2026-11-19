@@ -1,13 +1,11 @@
-CREATE TABLE TAGGED_ON (
-    UserID INT NOT NULL,
-    PostID INT NOT NULL,
+-- Table: TAGGED_ON
+-- Create order (foreign keys): USER, MOMENT, POST, FRIENDSHIP, COMMENT, REALMOJIS, REACTS_WITH, TAGGED_ON
 
-    PRIMARY KEY (UserID, PostID),
-
-    FOREIGN KEY (UserID)
-        REFERENCES `USER`(UserID),
-
-    FOREIGN KEY (PostID)
-        REFERENCES post(PostID)
-        ON DELETE CASCADE
-);
+CREATE TABLE `TAGGED_ON` (
+  `UserID` int NOT NULL,
+  `PostID` int NOT NULL,
+  PRIMARY KEY (`UserID`,`PostID`),
+  KEY `PostID` (`PostID`),
+  CONSTRAINT `tagged_on_ibfk_1` FOREIGN KEY (`UserID`) REFERENCES `USER` (`UserID`),
+  CONSTRAINT `tagged_on_ibfk_2` FOREIGN KEY (`PostID`) REFERENCES `POST` (`PostID`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
