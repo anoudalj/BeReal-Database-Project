@@ -1,6 +1,9 @@
-cd ~/Documents/BeReal-Database-Project/java
-export DB_URL="jdbc:mysql://127.0.0.1:3306/Bereal"
-export DB_USER=root
-export DB_PASSWORD="095421"
-javac *.java
-java Main
+#!/bin/bash
+# Run from anywhere: ./java/run.sh
+cd "$(dirname "$0")"
+if [ -z "$DB_PASSWORD" ]; then
+  read -s -p "MySQL root password: " DB_PASSWORD; echo
+  export DB_PASSWORD
+fi
+rm -f *.class
+javac *.java && java Main
