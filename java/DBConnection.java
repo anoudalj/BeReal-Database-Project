@@ -9,10 +9,15 @@ import java.util.Properties;
 
 public class DBConnection {
 
-   
-    private static final String URL = "jdbc:mysql://127.0.0.1:3306/Bereal";
-    private static final String USER = "root";
-    private static final String PASSWORD = "095421";
+    // Read from environment variables (run.sh / run.bat ask for the password)
+    private static final String URL = env("DB_URL", "jdbc:mysql://127.0.0.1:3306/Bereal");
+    private static final String USER = env("DB_USER", "root");
+    private static final String PASSWORD = env("DB_PASSWORD", "YOUR_MYSQL_PASSWORD");
+
+    private static String env(String key, String fallback) {
+        String v = System.getenv(key);
+        return (v == null || v.isBlank()) ? fallback : v;
+    }
 
     // Both spellings are accepted (dots or underscores in the version number)
     private static final String[] JAR_NAMES = {
@@ -25,7 +30,7 @@ public class DBConnection {
 
     public static Connection getConnection() throws SQLException {
         if ("YOUR_MYSQL_PASSWORD".equals(PASSWORD)) {
-            throw new SQLException("Enter your MySQL password in DBConnection.java first.");
+            throw new SQLException("MySQL password not set. Run run.sh / run.bat, or set the DB_PASSWORD environment variable.");
         }
 
         Properties props = new Properties();
