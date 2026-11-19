@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS `FRIENDSHIP` (
   CONSTRAINT `friendship_ibfk_1` FOREIGN KEY (`Requester_ID`) REFERENCES `USER` (`UserID`),
   UNIQUE KEY `uq_friendship_pair` (`Requester_ID`,`Receiver_ID`),
   CONSTRAINT `friendship_ibfk_2` FOREIGN KEY (`Receiver_ID`) REFERENCES `USER` (`UserID`),
-  CONSTRAINT `chk_friendship_status` CHECK (`Status` IN ('Pending','Accepted','Declined')),
+  CONSTRAINT `chk_friendship_status` CHECK (`Status` IN ('Pending','Accepted')),
   CONSTRAINT `chk_friendship_self` CHECK (`Requester_ID` <> `Receiver_ID`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
