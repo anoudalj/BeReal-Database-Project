@@ -21,14 +21,16 @@ public class Main extends JFrame {
         JButton postsButton = new JButton("Posts & Moments");
         JButton friendshipButton = new JButton("Friendships");
         JButton interactionsButton = new JButton("Interactions");
+        JButton advancedQueriesButton = new JButton("Advanced Queries & Admin");
 
         JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new GridLayout(4, 1, 10, 10));
+        buttonPanel.setLayout(new GridLayout(5, 1, 10, 10));
 
         buttonPanel.add(usersButton);
         buttonPanel.add(postsButton);
         buttonPanel.add(friendshipButton);
         buttonPanel.add(interactionsButton);
+        buttonPanel.add(advancedQueriesButton);
 
         JPanel centerPanel = new JPanel();
         centerPanel.setBorder(
@@ -69,11 +71,19 @@ public class Main extends JFrame {
                 "Interactions GUI will be added later."
             );
         });
+
+        // Open Advanced Queries GUI
+        advancedQueriesButton.addActionListener(e -> {
+            AdvancedQueriesGUI advancedGUI = new AdvancedQueriesGUI();
+            advancedGUI.setVisible(true);
+        });
     }
 
     public static void main(String[] args) {
 
-        Main menu = new Main();
-        menu.setVisible(true);
+        SwingUtilities.invokeLater(() -> {
+            Main menu = new Main();
+            menu.setVisible(true);
+        });
     }
 }

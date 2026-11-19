@@ -48,22 +48,24 @@ CREATE TABLE IF NOT EXISTS `FRIENDSHIP` (
   KEY `Requester_ID` (`Requester_ID`),
   KEY `Receiver_ID` (`Receiver_ID`),
   CONSTRAINT `friendship_ibfk_1` FOREIGN KEY (`Requester_ID`) REFERENCES `USER` (`UserID`),
-  CONSTRAINT `friendship_ibfk_2` FOREIGN KEY (`Receiver_ID`) REFERENCES `USER` (`UserID`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  UNIQUE KEY `uq_friendship_pair` (`Requester_ID`,`Receiver_ID`),
+  CONSTRAINT `friendship_ibfk_2` FOREIGN KEY (`Receiver_ID`) REFERENCES `USER` (`UserID`),
+  CONSTRAINT `chk_friendship_status` CHECK (`Status` IN ('Pending','Accepted')),
+  CONSTRAINT `chk_friendship_self` CHECK (`Requester_ID` <> `Receiver_ID`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Dumping data for table Bereal.FRIENDSHIP: ~2 rows (approximately)
+-- Dumping data for table Bereal.FRIENDSHIP: ~1 rows (approximately)
 INSERT INTO `FRIENDSHIP` (`Friendship_id`, `Date_Requested`, `ApprovedDate`, `Requester_ID`, `Receiver_ID`, `Status`) VALUES
-	(1, '2026-11-15', NULL, 3, 2, 'Pending'),
-	(2, '2026-11-15', NULL, 3, 2, 'Pending');
+	(1, '2026-11-15', NULL, 3, 2, 'Pending');
 
 -- Dumping structure for table Bereal.MOMENT
 CREATE TABLE IF NOT EXISTS `MOMENT` (
-  `MomentID` int NOT NULL,
+  `MomentID` int NOT NULL AUTO_INCREMENT,
   `Time` time NOT NULL,
   `TimeZone` varchar(50) NOT NULL,
   `Date` date NOT NULL,
   PRIMARY KEY (`MomentID`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Dumping data for table Bereal.MOMENT: ~1 rows (approximately)
 INSERT INTO `MOMENT` (`MomentID`, `Time`, `TimeZone`, `Date`) VALUES
@@ -84,7 +86,7 @@ CREATE TABLE IF NOT EXISTS `POST` (
   KEY `fk_post_user` (`UserID`),
   KEY `fk_post_moment` (`MomentID`),
   CONSTRAINT `fk_post_moment` FOREIGN KEY (`MomentID`) REFERENCES `MOMENT` (`MomentID`),
-  CONSTRAINT `fk_post_user` FOREIGN KEY (`UserID`) REFERENCES `user` (`UserID`)
+  CONSTRAINT `fk_post_user` FOREIGN KEY (`UserID`) REFERENCES `USER` (`UserID`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Dumping data for table Bereal.POST: ~1 rows (approximately)
