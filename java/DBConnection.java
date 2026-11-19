@@ -9,21 +9,30 @@ import java.util.Properties;
 
 public class DBConnection {
 
-    private static final String URL =
-    System.getenv("DB_URL");
+    // Set these as environment variables before running, for example:
+    //   DB_URL=jdbc:mysql://127.0.0.1:3306/Bereal
+    //   DB_USER=root
+    //   DB_PASSWORD=your_password
+    private static final String URL = System.getenv("DB_URL");
+    private static final String USER = System.getenv("DB_USER");
+    private static final String PASSWORD = System.getenv("DB_PASSWORD");
 
-private static final String USER =
-    System.getenv("DB_USER");
-
-private static final String PASSWORD =
-    System.getenv("DB_PASSWORD");
-
-    private static final String JAR_NAME = "mysql-connector-j-26.10.0.jar";
+    // Both spellings are accepted (dots or underscores in the version number)
+    private static final String[] JAR_NAMES = {
+        "mysql-connector-j-26.10.0.jar",
+        "mysql-connector-j-26_10_0.jar"
+    };
     private static final String DRIVER_CLASS = "com.mysql.cj.jdbc.Driver";
 
     private static Driver driver; // loaded once and reused
 
     public static Connection getConnection() throws SQLException {
+        if (URL == null || USER == null || PASSWORD == null) {
+            throw new SQLException(
+                "Database settings are missing. Set the environment variables " +
+                "DB_URL, DB_USER and DB_PASSWORD, then restart the program.");
+        }
+
         Properties props = new Properties();
         props.setProperty("user", USER);
         props.setProperty("password", PASSWORD);
@@ -65,16 +74,14 @@ private static final String PASSWORD =
     }
 
     private static File findJar() {
-        String[] candidates = {
-            "lib/" + JAR_NAME,
-            "java/lib/" + JAR_NAME,
-            "../java/lib/" + JAR_NAME
-        };
+        String[] folders = { "lib/", "java/lib/", "../java/lib/" };
 
-        for (String path : candidates) {
-            File f = new File(path);
-            if (f.exists()) {
-                return f.getAbsoluteFile();
+        for (String folder : folders) {
+            for (String name : JAR_NAMES) {
+                File f = new File(folder + name);
+                if (f.exists()) {
+                    return f.getAbsoluteFile();
+                }
             }
         }
         return null;
