@@ -3,6 +3,8 @@ import java.awt.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Statement;
 
 public class PostGUI extends JFrame {
@@ -10,7 +12,8 @@ public class PostGUI extends JFrame {
     public PostGUI() {
         setTitle("BeReal Posts");
         setSize(550, 400);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        // DISPOSE (not EXIT) so closing this window does not close the whole app
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
 
         JLabel titleLabel = new JLabel("Post Management", SwingConstants.CENTER);
@@ -36,49 +39,54 @@ public class PostGUI extends JFrame {
         deleteButton.addActionListener(e -> deletePost());
     }
 
-    private void viewPosts() {
-        try {
-            Connection conn = DBConnection.getConnection();
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery("SELECT * FROM POST");
+    private void showError(Exception e) {
+        String msg;
+        if (e instanceof NumberFormatException) {
+            msg = "Please enter valid numbers for the numeric fields.";
+        } else if (e instanceof SQLIntegrityConstraintViolationException) {
+            msg = "The User ID or Moment ID does not exist, " +
+                  "or this post is still referenced by other records.";
+        } else {
+            msg = e.getMessage();
+        }
+        JOptionPane.showMessageDialog(this, "Error: " + msg);
+    }
 
-            String posts = "";
+    private void viewPosts() {
+        try (Connection conn = DBConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT * FROM POST")) {
+
+            StringBuilder posts = new StringBuilder();
 
             while (rs.next()) {
-                posts += "Post ID: " + rs.getInt("PostID") + "\n";
-                posts += "Front Camera: " + rs.getString("FrontCam") + "\n";
-                posts += "Back Camera: " + rs.getString("BackCam") + "\n";
-                posts += "Caption: " + rs.getString("Caption") + "\n";
-                posts += "Retake Count: " + rs.getInt("RetakeCount") + "\n";
-                posts += "Hours Late: " + rs.getDouble("HoursLate") + "\n";
-                posts += "Posted At: " + rs.getString("PostedAt") + "\n";
-                posts += "User ID: " + rs.getInt("UserID") + "\n";
-                posts += "Moment ID: " + rs.getInt("MomentID") + "\n";
-                posts += "-------------------------\n";
+                posts.append("Post ID: ").append(rs.getInt("PostID")).append("\n");
+                posts.append("Front Camera: ").append(rs.getString("FrontCam")).append("\n");
+                posts.append("Back Camera: ").append(rs.getString("BackCam")).append("\n");
+                posts.append("Caption: ").append(rs.getString("Caption")).append("\n");
+                posts.append("Retake Count: ").append(rs.getInt("RetakeCount")).append("\n");
+                posts.append("Hours Late: ").append(rs.getDouble("HoursLate")).append("\n");
+                posts.append("Posted At: ").append(rs.getString("PostedAt")).append("\n");
+                posts.append("User ID: ").append(rs.getInt("UserID")).append("\n");
+                posts.append("Moment ID: ").append(rs.getInt("MomentID")).append("\n");
+                posts.append("-------------------------\n");
             }
 
-            JTextArea textArea = new JTextArea(posts);
+            if (posts.length() == 0) {
+                posts.append("No posts found.");
+            }
+
+            JTextArea textArea = new JTextArea(posts.toString());
             textArea.setEditable(false);
 
             JScrollPane scrollPane = new JScrollPane(textArea);
             scrollPane.setPreferredSize(new Dimension(420, 260));
 
             JOptionPane.showMessageDialog(
-                this,
-                scrollPane,
-                "Posts",
-                JOptionPane.INFORMATION_MESSAGE
-            );
+                this, scrollPane, "Posts", JOptionPane.INFORMATION_MESSAGE);
 
-            rs.close();
-            stmt.close();
-            conn.close();
-
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(
-                this,
-                "Error: " + e.getMessage()
-            );
+        } catch (SQLException e) {
+            showError(e);
         }
     }
 
@@ -87,8 +95,8 @@ public class PostGUI extends JFrame {
         JTextField frontCamField = new JTextField();
         JTextField backCamField = new JTextField();
         JTextField captionField = new JTextField();
-        JTextField retakeCountField = new JTextField();
-        JTextField hoursLateField = new JTextField();
+        JTextField retakeCountField = new JTextField("0");
+        JTextField hoursLateField = new JTextField("0");
         JTextField postedAtField = new JTextField();
         JTextField userIDField = new JTextField();
         JTextField momentIDField = new JTextField();
@@ -105,47 +113,42 @@ public class PostGUI extends JFrame {
         };
 
         int option = JOptionPane.showConfirmDialog(
-            this,
-            fields,
-            "Create Post",
-            JOptionPane.OK_CANCEL_OPTION
-        );
+            this, fields, "Create Post", JOptionPane.OK_CANCEL_OPTION);
 
-        if (option == JOptionPane.OK_OPTION) {
+        if (option != JOptionPane.OK_OPTION) {
+            return;
+        }
 
-            String sql = "INSERT INTO POST " +
-                         "(FrontCam, BackCam, Caption, RetakeCount, HoursLate, PostedAt, UserID, MomentID) " +
-                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        if (frontCamField.getText().trim().isEmpty()
+                || backCamField.getText().trim().isEmpty()
+                || postedAtField.getText().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                "Front camera, back camera and posted-at time are required.");
+            return;
+        }
 
-            try {
-                Connection conn = DBConnection.getConnection();
-                PreparedStatement pstmt = conn.prepareStatement(sql);
+        String sql = "INSERT INTO POST " +
+                     "(FrontCam, BackCam, Caption, RetakeCount, HoursLate, PostedAt, UserID, MomentID) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
-                pstmt.setString(1, frontCamField.getText());
-                pstmt.setString(2, backCamField.getText());
-                pstmt.setString(3, captionField.getText());
-                pstmt.setInt(4, Integer.parseInt(retakeCountField.getText()));
-                pstmt.setDouble(5, Double.parseDouble(hoursLateField.getText()));
-                pstmt.setString(6, postedAtField.getText());
-                pstmt.setInt(7, Integer.parseInt(userIDField.getText()));
-                pstmt.setInt(8, Integer.parseInt(momentIDField.getText()));
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-                pstmt.executeUpdate();
+            pstmt.setString(1, frontCamField.getText().trim());
+            pstmt.setString(2, backCamField.getText().trim());
+            pstmt.setString(3, captionField.getText());
+            pstmt.setInt(4, Integer.parseInt(retakeCountField.getText().trim()));
+            pstmt.setDouble(5, Double.parseDouble(hoursLateField.getText().trim()));
+            pstmt.setString(6, postedAtField.getText().trim());
+            pstmt.setInt(7, Integer.parseInt(userIDField.getText().trim()));
+            pstmt.setInt(8, Integer.parseInt(momentIDField.getText().trim()));
 
-                JOptionPane.showMessageDialog(
-                    this,
-                    "Post created successfully!"
-                );
+            pstmt.executeUpdate();
 
-                pstmt.close();
-                conn.close();
+            JOptionPane.showMessageDialog(this, "Post created successfully!");
 
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(
-                    this,
-                    "Error: " + e.getMessage()
-                );
-            }
+        } catch (Exception e) {
+            showError(e);
         }
     }
 
@@ -160,95 +163,66 @@ public class PostGUI extends JFrame {
         };
 
         int option = JOptionPane.showConfirmDialog(
-            this,
-            fields,
-            "Update Post",
-            JOptionPane.OK_CANCEL_OPTION
-        );
+            this, fields, "Update Post", JOptionPane.OK_CANCEL_OPTION);
 
-        if (option == JOptionPane.OK_OPTION) {
+        if (option != JOptionPane.OK_OPTION) {
+            return;
+        }
 
-            String sql = "UPDATE POST SET Caption = ? WHERE PostID = ?";
+        String sql = "UPDATE POST SET Caption = ? WHERE PostID = ?";
 
-            try {
-                Connection conn = DBConnection.getConnection();
-                PreparedStatement pstmt = conn.prepareStatement(sql);
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-                pstmt.setString(1, captionField.getText());
-                pstmt.setInt(2, Integer.parseInt(postIDField.getText()));
+            pstmt.setString(1, captionField.getText());
+            pstmt.setInt(2, Integer.parseInt(postIDField.getText().trim()));
 
-                int rowsUpdated = pstmt.executeUpdate();
+            int rowsUpdated = pstmt.executeUpdate();
 
-                if (rowsUpdated > 0) {
-                    JOptionPane.showMessageDialog(
-                        this,
-                        "Post updated successfully!"
-                    );
-                } else {
-                    JOptionPane.showMessageDialog(
-                        this,
-                        "Post not found."
-                    );
-                }
+            JOptionPane.showMessageDialog(this,
+                rowsUpdated > 0 ? "Post updated successfully!" : "Post not found.");
 
-                pstmt.close();
-                conn.close();
-
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(
-                    this,
-                    "Error: " + e.getMessage()
-                );
-            }
+        } catch (Exception e) {
+            showError(e);
         }
     }
 
     private void deletePost() {
 
-        String postID = JOptionPane.showInputDialog(
-            this,
-            "Enter Post ID to delete:"
-        );
+        String postID = JOptionPane.showInputDialog(this, "Enter Post ID to delete:");
 
         if (postID == null || postID.trim().isEmpty()) {
             return;
         }
 
+        int confirm = JOptionPane.showConfirmDialog(
+            this,
+            "Delete post " + postID.trim() + "? Its comments, reactions and tags will be deleted too.",
+            "Confirm delete",
+            JOptionPane.YES_NO_OPTION);
+
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
         String sql = "DELETE FROM POST WHERE PostID = ?";
 
-        try {
-            Connection conn = DBConnection.getConnection();
-            PreparedStatement pstmt = conn.prepareStatement(sql);
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setInt(1, Integer.parseInt(postID));
+            pstmt.setInt(1, Integer.parseInt(postID.trim()));
 
             int rowsDeleted = pstmt.executeUpdate();
 
-            if (rowsDeleted > 0) {
-                JOptionPane.showMessageDialog(
-                    this,
-                    "Post deleted successfully!"
-                );
-            } else {
-                JOptionPane.showMessageDialog(
-                    this,
-                    "Post not found."
-                );
-            }
-
-            pstmt.close();
-            conn.close();
+            JOptionPane.showMessageDialog(this,
+                rowsDeleted > 0 ? "Post deleted successfully!" : "Post not found.");
 
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(
-                this,
-                "Error: " + e.getMessage()
-            );
+            showError(e);
         }
     }
 
     public static void main(String[] args) {
-        PostGUI frame = new PostGUI();
-        frame.setVisible(true);
+        SwingUtilities.invokeLater(() -> new PostGUI().setVisible(true));
     }
 }
