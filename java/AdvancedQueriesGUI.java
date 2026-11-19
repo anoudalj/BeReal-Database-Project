@@ -217,9 +217,4 @@ private static Path searchUpwards(Path start) {
         }
     }
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            new AdvancedQueriesGUI().setVisible(true);
-        });
-    }
 }
