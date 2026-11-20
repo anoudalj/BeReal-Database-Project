@@ -22,7 +22,7 @@ public final class AdminSetup {
             return;
         }
         String secret = System.getenv("ADMIN_SETUP_KEY");
-        if (secret == null || secret.length() < 6) {
+        if (secret == null || secret.length() < 5) {
             System.err.println("ADMIN_SETUP_KEY must be set to a secret of at least 6 characters.");
             return;
         }

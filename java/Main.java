@@ -11,7 +11,7 @@ import java.util.Arrays;
 public class Main extends JFrame {
     // Demo-only authorization password. Change this before sharing the project.
     // This is not secure against anyone who can inspect the application code.
-    private static final String ADMIN_CREATION_PASSWORD = "admin6";
+    private static final String ADMIN_CREATION_PASSWORD = "admin";
     private int failedAdminAttempts = 0;
     private final JPanel content = BeRealTheme.panel(new BorderLayout());
     public Main() {
@@ -156,11 +156,11 @@ public class Main extends JFrame {
     }
     private void authenticate(String identity, char[] password, String role) {
         if (identity.trim().isEmpty() || password.length == 0) { error("Enter your username/email and password."); return; }
-        String sql = "SELECT UserID, Username, Password, UserType FROM `USER` WHERE Username = ? OR Email = ?";
+        String sql = "SELECT UserID, Username, Password, UserType, AccountStatus FROM `USER` WHERE Username = ? OR Email = ?";
         try (Connection c = DBConnection.getConnection(); PreparedStatement s = c.prepareStatement(sql)) {
             s.setString(1, identity.trim()); s.setString(2, identity.trim());
             try (ResultSet r = s.executeQuery()) {
-                if (!r.next() || !roleMatches(role, r.getString("UserType")) || !verify(password, r.getString("Password"))) { error("Login failed. Check your credentials and selected role."); return; }
+                if (!r.next() || !"Active".equalsIgnoreCase(r.getString("AccountStatus")) || !roleMatches(role, r.getString("UserType")) || !verify(password, r.getString("Password"))) { error("Login failed. Check your credentials and selected role."); return; }
                 dashboard(r.getInt("UserID"), r.getString("Username"), role);
             }
         } catch (SQLException ex) { error("Database error: " + ex.getMessage()); }
@@ -188,6 +188,12 @@ public class Main extends JFrame {
         header.add(friends,BorderLayout.WEST);header.add(BeRealTheme.header(""),BorderLayout.CENTER);header.add(profile,BorderLayout.EAST);
         p.add(header,BorderLayout.NORTH);BeRealFeed feed=new BeRealFeed(userId);p.add(feed,BorderLayout.CENTER);
         JPanel bottom=BeRealTheme.panel(new BorderLayout(0,12));
+        try(Connection c=DBConnection.getConnection()){
+            JLabel streak=BeRealTheme.note("Current posting streak: "+BeRealAccess.streak(c,userId)+" day(s)");
+            streak.setHorizontalAlignment(SwingConstants.CENTER);
+            bottom.add(streak,BorderLayout.SOUTH);
+        } catch(SQLException ignored) { }
+
         JButton capture=BeRealTheme.button("Take a BeReal",true);
         capture.addActionListener(e -> { PostGUI editor=new PostGUI(userId);editor.addWindowListener(new java.awt.event.WindowAdapter(){
             @Override public void windowClosed(java.awt.event.WindowEvent event){feed.refresh();}
@@ -197,6 +203,8 @@ public class Main extends JFrame {
             JButton manage=BeRealTheme.button("Manage users & posts",false);manage.addActionListener(e -> new AdminManagementGUI(userId).setVisible(true));links.add(manage);
             JButton queries=BeRealTheme.button("Advanced Queries",false);queries.addActionListener(e -> new AdvancedQueriesGUI().setVisible(true));links.add(queries);
         }
+        JButton realmojis=BeRealTheme.button("My RealMojis",false);
+        realmojis.addActionListener(e->new RealMojiGUI(userId).setVisible(true));links.add(realmojis);
         JButton logout=BeRealTheme.button("Log out",false);logout.addActionListener(e -> showWelcome());links.add(logout);
         bottom.add(links,BorderLayout.CENTER);p.add(bottom,BorderLayout.SOUTH);showPage(p);
     }

@@ -13,6 +13,12 @@ public final class AdminManagementGUI extends JFrame {
     private final java.util.List<Integer> userIds = new java.util.ArrayList<>();
     private final java.util.List<Integer> postIds = new java.util.ArrayList<>();
     private final java.util.List<int[]> commentKeys = new java.util.ArrayList<>();
+    private final DefaultTableModel friendships=model("From", "To", "Status", "Requested");
+    private final DefaultTableModel reactions=model("Reactor", "Post date", "RealMoji");
+    private final DefaultTableModel tags=model("Tagged user", "Post date", "Caption");
+    private final JTable friendshipTable=new JTable(friendships),reactionTable=new JTable(reactions),tagTable=new JTable(tags);
+    private final java.util.List<Integer> friendshipIds=new java.util.ArrayList<>();
+    private final java.util.List<int[]> reactionKeys=new java.util.ArrayList<>(),tagKeys=new java.util.ArrayList<>();
     private final JLabel selected = BeRealTheme.note("Select an account to inspect its content.");
     private final JTextField search = new JTextField(20);
     private final JTabbedPane tabs = new JTabbedPane();
@@ -48,6 +54,9 @@ public final class AdminManagementGUI extends JFrame {
         tabs.addTab("Account",accountActions());
         tabs.addTab("Posts",postActions());
         tabs.addTab("Comments",commentActions());
+        tabs.addTab("Friendships",friendshipActions());
+        tabs.addTab("Reactions",reactionActions());
+        tabs.addTab("Tags",tagActions());
         tabs.addTab("Other operations",otherActions());
         tabs.addTab("Report queries",reportQueries());
         tabs.setPreferredSize(new Dimension(850,330));
@@ -80,6 +89,8 @@ public final class AdminManagementGUI extends JFrame {
         buttons.add(button("Change email",()->changeUser("Email", "Email")));
         buttons.add(button("Account privacy",()->chooseUser("Account_Type",new String[]{"Public","Private"})));
         buttons.add(button("Account status",()->chooseUser("AccountStatus",new String[]{"Active","UnderReview","Suspended"})));
+        buttons.add(button("Account role",()->chooseUser("UserType",new String[]{"Regular","Admin"})));
+        buttons.add(button("Delete user account",()->deleteUser()));
         p.add(buttons,BorderLayout.SOUTH);return p;
     }
     private JPanel postActions() {
@@ -91,6 +102,22 @@ public final class AdminManagementGUI extends JFrame {
         return actionPanel(commentTable,
             button("Remove selected comment",()->deleteComment()),
             button("Refresh comments",()->loadSelected()));
+    }
+    private JPanel friendshipActions(){
+        return actionPanel(friendshipTable,
+            button("Remove friendship",()->removeFriendship()),
+            button("Correct status",()->correctFriendship()),
+            button("Refresh",()->loadSelected()));
+    }
+    private JPanel reactionActions(){
+        return actionPanel(reactionTable,
+            button("Remove selected reaction",()->removeReaction()),
+            button("Refresh",()->loadSelected()));
+    }
+    private JPanel tagActions(){
+        return actionPanel(tagTable,
+            button("Remove selected tag",()->removeTag()),
+            button("Refresh",()->loadSelected()));
     }
     private JPanel otherActions() {
         JPanel p=BeRealTheme.panel(new BorderLayout());
@@ -142,7 +169,7 @@ public final class AdminManagementGUI extends JFrame {
         }catch(Exception e){fail(e);}
     }
     private boolean isAdmin() {
-        try(Connection c=DBConnection.getConnection();PreparedStatement s=c.prepareStatement("SELECT UserType FROM `USER` WHERE UserID=?")){
+        try(Connection c=DBConnection.getConnection();PreparedStatement s=c.prepareStatement("SELECT UserType FROM `USER` WHERE UserID=? AND COALESCE(AccountStatus,'Active')='Active'")){
             s.setInt(1,adminId);try(ResultSet r=s.executeQuery()){return r.next() && "Admin".equalsIgnoreCase(r.getString(1));}
         } catch(SQLException e){return false;}
     }
@@ -165,6 +192,7 @@ public final class AdminManagementGUI extends JFrame {
         try(Connection c=DBConnection.getConnection();PreparedStatement s=c.prepareStatement(sql)){
             s.setString(1,"%"+search.getText().trim()+"%");
             users.setRowCount(0);userIds.clear();posts.setRowCount(0);postIds.clear();comments.setRowCount(0);commentKeys.clear();
+            friendships.setRowCount(0);friendshipIds.clear();reactions.setRowCount(0);reactionKeys.clear();tags.setRowCount(0);tagKeys.clear();
             try(ResultSet r=s.executeQuery()){while(r.next()){
                 userIds.add(r.getInt("UserID"));users.addRow(new Object[]{r.getString("Username"),r.getString("Email"),r.getString("UserType"),r.getString("Account_Type"),r.getString("AccountStatus")});
             }} selected.setText("Select an account to inspect its content.");
@@ -176,6 +204,7 @@ public final class AdminManagementGUI extends JFrame {
             int uid=chosenUser();String username=String.valueOf(userTable.getValueAt(userTable.getSelectedRow(),0));
             selected.setText("Managing @"+username+" — posts and comments shown below");
             posts.setRowCount(0);postIds.clear();comments.setRowCount(0);commentKeys.clear();
+            friendships.setRowCount(0);friendshipIds.clear();reactions.setRowCount(0);reactionKeys.clear();tags.setRowCount(0);tagKeys.clear();
             try(Connection c=DBConnection.getConnection()){
                 try(PreparedStatement s=c.prepareStatement("SELECT PostID,PostedAt,Caption,RetakeCount,HoursLate FROM POST WHERE UserID=? ORDER BY PostedAt DESC,PostID DESC")){
                     s.setInt(1,uid);try(ResultSet r=s.executeQuery()){while(r.next()){
@@ -191,6 +220,28 @@ public final class AdminManagementGUI extends JFrame {
                         comments.addRow(new Object[]{r.getTimestamp(3),r.getString(4),r.getString(5),r.getTimestamp(6)});
                     }}
                 }
+                try(PreparedStatement st=c.prepareStatement("SELECT F.Friendship_id,A.Username,B.Username,F.Status,F.Date_Requested FROM FRIENDSHIP F "
+                    +"JOIN `USER` A ON A.UserID=F.Requester_ID JOIN `USER` B ON B.UserID=F.Receiver_ID "
+                    +"WHERE F.Requester_ID=? OR F.Receiver_ID=? ORDER BY F.Date_Requested DESC")){
+                    st.setInt(1,uid);st.setInt(2,uid);try(ResultSet r=st.executeQuery()){while(r.next()){
+                        friendshipIds.add(r.getInt(1));friendships.addRow(new Object[]{r.getString(2),r.getString(3),r.getString(4),r.getDate(5)});
+                    }}
+                }
+                try(PreparedStatement st=c.prepareStatement("SELECT RW.UserID,RW.PostID,RW.RealMojiID,U.Username,P.PostedAt,R.Emoji "
+                    +"FROM REACTS_WITH RW JOIN `USER` U ON U.UserID=RW.UserID JOIN POST P ON P.PostID=RW.PostID "
+                    +"JOIN REALMOJIS R ON R.RealMojiID=RW.RealMojiID WHERE RW.UserID=? OR P.UserID=? OR R.UserID=?")){
+                    st.setInt(1,uid);st.setInt(2,uid);st.setInt(3,uid);try(ResultSet r=st.executeQuery()){while(r.next()){
+                        reactionKeys.add(new int[]{r.getInt(1),r.getInt(2),r.getInt(3)});
+                        reactions.addRow(new Object[]{r.getString(4),r.getTimestamp(5),r.getString(6)});
+                    }}
+                }
+                try(PreparedStatement st=c.prepareStatement("SELECT T.UserID,T.PostID,U.Username,P.PostedAt,P.Caption FROM TAGGED_ON T "
+                    +"JOIN `USER` U ON U.UserID=T.UserID JOIN POST P ON P.PostID=T.PostID WHERE T.UserID=? OR P.UserID=?")){
+                    st.setInt(1,uid);st.setInt(2,uid);try(ResultSet r=st.executeQuery()){while(r.next()){
+                        tagKeys.add(new int[]{r.getInt(1),r.getInt(2)});
+                        tags.addRow(new Object[]{r.getString(3),r.getTimestamp(4),r.getString(5)});
+                    }}
+                }
             }
         } catch(Exception e){fail(e);}
     }
@@ -198,7 +249,7 @@ public final class AdminManagementGUI extends JFrame {
         try {
             int uid=chosenUser();String value=JOptionPane.showInputDialog(this,"New "+label+":");
             if(value==null)return;value=value.trim();
-            if(value.isBlank() || value.length()>255)throw new IllegalArgumentException("Value must not be empty or too long.");
+            if(value.isBlank() || value.length()>("Username".equals(column)?50:255))throw new IllegalArgumentException("Value must not be empty or too long.");
             if("Email".equals(column) && !value.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) throw new IllegalArgumentException("Enter a valid email.");
             if(!confirm("Change "+label+" for selected user?"))return;
             update("UPDATE `USER` SET "+column+"=? WHERE UserID=?",value,uid);
@@ -207,7 +258,9 @@ public final class AdminManagementGUI extends JFrame {
     }
     private void chooseUser(String column,String[] choices) {
         try{
-            int uid=chosenUser();String choice=(String)JOptionPane.showInputDialog(this,"Choose "+column,"Account settings",JOptionPane.QUESTION_MESSAGE,null,choices,choices[0]);
+            int uid=chosenUser();
+            if(uid==adminId && ("AccountStatus".equals(column) || "UserType".equals(column)))throw new SQLException("You cannot suspend or demote your current admin session.");
+            String choice=(String)JOptionPane.showInputDialog(this,"Choose "+column,"Account settings",JOptionPane.QUESTION_MESSAGE,null,choices,choices[0]);
             if(choice==null || !confirm("Set "+column+" to "+choice+"?"))return;
             update("UPDATE `USER` SET "+column+"=? WHERE UserID=?",choice,uid);loadUsers();
         }catch(Exception e){fail(e);}
@@ -247,6 +300,77 @@ public final class AdminManagementGUI extends JFrame {
             }loadSelected();
         }catch(Exception e){fail(e);}
     }
+    private void removeFriendship(){
+        try{
+            if(!isAdmin())throw new SQLException("Admin access denied.");
+            int id=friendshipIds.get(selectedIndex(friendshipTable,friendshipIds.size()));
+            if(!confirm("Remove selected friendship/request?"))return;
+            try(Connection c=DBConnection.getConnection();PreparedStatement st=c.prepareStatement("DELETE FROM FRIENDSHIP WHERE Friendship_id=?")){
+                st.setInt(1,id);st.executeUpdate();
+            }loadSelected();
+        }catch(Exception e){fail(e);}
+    }
+    private void correctFriendship(){
+        try{
+            if(!isAdmin())throw new SQLException("Admin access denied.");
+            int id=friendshipIds.get(selectedIndex(friendshipTable,friendshipIds.size()));
+            String status=(String)JOptionPane.showInputDialog(this,"Correct friendship status:","Friendship status",JOptionPane.QUESTION_MESSAGE,null,new String[]{"Pending","Accepted"},"Accepted");
+            if(status==null || !confirm("Update selected friendship to "+status+"?"))return;
+            try(Connection c=DBConnection.getConnection();PreparedStatement st=c.prepareStatement("UPDATE FRIENDSHIP SET Status=?,ApprovedDate=? WHERE Friendship_id=?")){
+                st.setString(1,status);if(status.equals("Accepted"))st.setDate(2,new java.sql.Date(System.currentTimeMillis()));else st.setNull(2,Types.DATE);
+                st.setInt(3,id);st.executeUpdate();
+            }loadSelected();
+        }catch(Exception e){fail(e);}
+    }
+    private void removeReaction(){
+        try{
+            if(!isAdmin())throw new SQLException("Admin access denied.");
+            int[] key=reactionKeys.get(selectedIndex(reactionTable,reactionKeys.size()));
+            if(!confirm("Remove selected reaction?"))return;
+            try(Connection c=DBConnection.getConnection();PreparedStatement st=c.prepareStatement("DELETE FROM REACTS_WITH WHERE UserID=? AND PostID=? AND RealMojiID=?")){
+                st.setInt(1,key[0]);st.setInt(2,key[1]);st.setInt(3,key[2]);st.executeUpdate();
+            }loadSelected();
+        }catch(Exception e){fail(e);}
+    }
+    private void removeTag(){
+        try{
+            if(!isAdmin())throw new SQLException("Admin access denied.");
+            int[] key=tagKeys.get(selectedIndex(tagTable,tagKeys.size()));
+            if(!confirm("Remove selected tag?"))return;
+            try(Connection c=DBConnection.getConnection();PreparedStatement st=c.prepareStatement("DELETE FROM TAGGED_ON WHERE UserID=? AND PostID=?")){
+                st.setInt(1,key[0]);st.setInt(2,key[1]);st.executeUpdate();
+            }loadSelected();
+        }catch(Exception e){fail(e);}
+    }
+    private void deleteUser(){
+        try{
+            if(!isAdmin())throw new SQLException("Admin access denied.");
+            int uid=chosenUser();if(uid==adminId)throw new IllegalArgumentException("You cannot delete your own admin account while logged in.");
+            String username=String.valueOf(userTable.getValueAt(userTable.getSelectedRow(),0));
+            if(!confirm("Permanently delete @"+username+" and all their posts, reactions, comments, friendships, tags and RealMojis? This cannot be undone."))return;
+            try(Connection c=DBConnection.getConnection()){
+                c.setAutoCommit(false);
+                try{
+                    String[] statements={
+                        "DELETE FROM REACTS_WITH WHERE UserID=? OR PostID IN (SELECT PostID FROM POST WHERE UserID=?) OR RealMojiID IN (SELECT RealMojiID FROM REALMOJIS WHERE UserID=?)",
+                        "DELETE FROM TAGGED_ON WHERE UserID=? OR PostID IN (SELECT PostID FROM POST WHERE UserID=?)",
+                        "DELETE FROM COMMENT WHERE UserID=? OR PostID IN (SELECT PostID FROM POST WHERE UserID=?)",
+                        "DELETE FROM FRIENDSHIP WHERE Requester_ID=? OR Receiver_ID=?",
+                        "DELETE FROM POST WHERE UserID=?",
+                        "DELETE FROM REALMOJIS WHERE UserID=?",
+                        "DELETE FROM `USER` WHERE UserID=?"};
+                    for(int i=0;i<statements.length;i++){
+                        try(PreparedStatement st=c.prepareStatement(statements[i])){
+                            int n=(i==0?3:i<=3?2:1);
+                            for(int j=1;j<=n;j++)st.setInt(j,uid);
+                            st.executeUpdate();
+                        }
+                    }
+                    c.commit();
+                }catch(Exception ex){c.rollback();throw ex;}
+            }loadUsers();JOptionPane.showMessageDialog(this,"Account deleted.");
+        }catch(Exception e){fail(e);}
+    }
     private String ask(String prompt){return JOptionPane.showInputDialog(this,prompt);}
     private void createMoment(){
         try {
@@ -273,30 +397,53 @@ public final class AdminManagementGUI extends JFrame {
             }
         }catch(Exception e){fail(e);}
     }
+    private static final class Choice {
+        final int id;final String description;
+        Choice(int id,String description){this.id=id;this.description=description;}
+        @Override public String toString(){return description;}
+    }
     private void removeRealMoji(){
         try{
             if(!isAdmin())throw new SQLException("Admin access denied.");
-            int user=chosenUser();String id=ask("Flagged RealMoji ID belonging to selected user:");if(id==null)return;
-            if(!confirm("Delete this RealMoji and its reactions?"))return;
+            int uid=chosenUser();java.util.List<Choice> options=new java.util.ArrayList<>();
+            try(Connection c=DBConnection.getConnection();PreparedStatement st=c.prepareStatement("SELECT RealMojiID,Emoji FROM REALMOJIS WHERE UserID=? ORDER BY Emoji")){
+                st.setInt(1,uid);try(ResultSet r=st.executeQuery()){
+                    while(r.next())options.add(new Choice(r.getInt(1),r.getString(2)));
+                }
+            }
+            if(options.isEmpty()){JOptionPane.showMessageDialog(this,"This user has no RealMojis.");return;}
+            Choice selected=(Choice)JOptionPane.showInputDialog(this,"Choose flagged RealMoji:","Remove RealMoji",JOptionPane.QUESTION_MESSAGE,null,options.toArray(),options.get(0));
+            if(selected==null || !confirm("Delete this RealMoji and all its reactions?"))return;
             try(Connection c=DBConnection.getConnection()){
                 c.setAutoCommit(false);
                 try{
-                    try(PreparedStatement s=c.prepareStatement("DELETE FROM REACTS_WITH WHERE RealMojiID=?")){s.setInt(1,Integer.parseInt(id));s.executeUpdate();}
-                    try(PreparedStatement s=c.prepareStatement("DELETE FROM REALMOJIS WHERE RealMojiID=? AND UserID=?")){
-                        s.setInt(1,Integer.parseInt(id));s.setInt(2,user);if(s.executeUpdate()!=1)throw new SQLException("RealMoji not found for selected user.");
+                    try(PreparedStatement st=c.prepareStatement("DELETE FROM REACTS_WITH WHERE RealMojiID=?")){
+                        st.setInt(1,selected.id);st.executeUpdate();
+                    }
+                    try(PreparedStatement st=c.prepareStatement("DELETE FROM REALMOJIS WHERE RealMojiID=? AND UserID=?")){
+                        st.setInt(1,selected.id);st.setInt(2,uid);
+                        if(st.executeUpdate()!=1)throw new SQLException("RealMoji no longer exists.");
                     }c.commit();
-                }catch(SQLException e){c.rollback();throw e;}
-            }JOptionPane.showMessageDialog(this,"RealMoji removed.");
+                }catch(Exception ex){c.rollback();throw ex;}
+            }JOptionPane.showMessageDialog(this,"RealMoji removed.");loadSelected();
         }catch(Exception e){fail(e);}
     }
     private void restoreTag(){
         try{
             if(!isAdmin())throw new SQLException("Admin access denied.");
-            int user=chosenUser();String pid=ask("Post ID to restore tag on (must exist):");if(pid==null)return;
-            if(!confirm("Tag selected user in this post?"))return;
-            try(Connection c=DBConnection.getConnection();PreparedStatement s=c.prepareStatement("INSERT INTO TAGGED_ON (UserID,PostID) VALUES (?,?)")){
-                s.setInt(1,user);s.setInt(2,Integer.parseInt(pid.trim()));s.executeUpdate();
-            }JOptionPane.showMessageDialog(this,"Tag restored.");
+            int uid=chosenUser();java.util.List<Choice> choices=new java.util.ArrayList<>();
+            try(Connection c=DBConnection.getConnection();PreparedStatement st=c.prepareStatement("SELECT P.PostID,P.Caption,P.PostedAt,U.Username FROM POST P JOIN `USER` U ON U.UserID=P.UserID ORDER BY P.PostedAt DESC LIMIT 100")){
+                try(ResultSet r=st.executeQuery()){
+                    while(r.next())choices.add(new Choice(r.getInt(1),"@"+r.getString(4)+" · "+r.getTimestamp(3)+" · "+r.getString(2)));
+                }
+            }
+            if(choices.isEmpty()){JOptionPane.showMessageDialog(this,"No posts found.");return;}
+            Choice post=(Choice)JOptionPane.showInputDialog(this,"Restore selected user's tag on this post:","Restore tag",JOptionPane.QUESTION_MESSAGE,null,choices.toArray(),choices.get(0));
+            if(post==null || !confirm("Restore selected user's tag on this post?"))return;
+            try(Connection c=DBConnection.getConnection();PreparedStatement st=c.prepareStatement("INSERT INTO TAGGED_ON (UserID,PostID) VALUES (?,?)")){
+                st.setInt(1,uid);st.setInt(2,post.id);st.executeUpdate();
+            }JOptionPane.showMessageDialog(this,"Tag restored.");loadSelected();
         }catch(Exception e){fail(e);}
     }
+
 }

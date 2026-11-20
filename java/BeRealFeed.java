@@ -34,15 +34,16 @@ public class BeRealFeed extends JPanel {
         status("Loading your BeReal…");
         new SwingWorker<List<Post>, Void>() {
             protected List<Post> doInBackground() throws Exception {
-                String sql = "SELECT P.PostID, P.UserID, U.Username, P.BackCam, P.FrontCam, "
-                    + "P.Caption, P.PostedAt FROM POST P JOIN `USER` U ON U.UserID=P.UserID WHERE "
-                    + (onlyMine ? "P.UserID=? " : "(P.UserID=? OR EXISTS (SELECT 1 FROM FRIENDSHIP F "
-                    + "WHERE F.Status='Accepted' AND ((F.Requester_ID=? AND F.Receiver_ID=P.UserID) "
-                    + "OR (F.Receiver_ID=? AND F.Requester_ID=P.UserID)))) ")
-                    + "ORDER BY P.PostedAt DESC, P.PostID DESC LIMIT 50";
+                String sql="SELECT P.PostID,P.UserID,U.Username,P.BackCam,P.FrontCam,P.Caption,P.PostedAt "
+                    +"FROM POST P JOIN `USER` U ON U.UserID=P.UserID WHERE COALESCE(U.AccountStatus,'Active')='Active' AND "
+                    +(onlyMine ? "P.UserID=? " : "(P.UserID=? OR U.Account_Type='Public' OR (EXISTS "
+                    +"(SELECT 1 FROM FRIENDSHIP F WHERE F.Status='Accepted' AND ((F.Requester_ID=? AND F.Receiver_ID=P.UserID) OR "
+                    +"(F.Receiver_ID=? AND F.Requester_ID=P.UserID))) AND EXISTS (SELECT 1 FROM POST X WHERE X.UserID=?))) ")
+                    +"ORDER BY P.PostedAt DESC,P.PostID DESC LIMIT 50";
                 List<Post> posts = new ArrayList<>();
                 try (Connection c=DBConnection.getConnection(); PreparedStatement s=c.prepareStatement(sql)) {
-                    s.setInt(1,userId); if(!onlyMine) { s.setInt(2,userId); s.setInt(3,userId); }
+                    if(!BeRealAccess.active(c,userId)) throw new SQLException("Account is inactive. Please contact an administrator.");
+                    s.setInt(1,userId); if(!onlyMine) { s.setInt(2,userId); s.setInt(3,userId); s.setInt(4,userId); }
                     try (ResultSet r=s.executeQuery()) {
                         while(r.next()) posts.add(new Post(r.getInt(1),r.getInt(2),r.getString(3),
                             r.getString(4),r.getString(5),r.getString(6),r.getString(7)));

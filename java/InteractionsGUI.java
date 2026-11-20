@@ -14,7 +14,7 @@ public class InteractionsGUI extends JFrame {
 
     private JTextArea commentInput;
     private JTextField commentNumberInput;
-    private JTextField realMojiInput;
+    private JComboBox<RealMojiOption> realMojiBox;
     private JTextField taggedUserInput;
 
     private JTable commentsTable;
@@ -35,6 +35,7 @@ public class InteractionsGUI extends JFrame {
         setLocationRelativeTo(null);
 
         buildGUI();
+        loadRealMojis();
         loadPosts();
     }
 
@@ -167,8 +168,7 @@ for (int i = 0; i < tabs.getTabCount(); i++) {
         form.add(new JScrollPane(commentInput), BorderLayout.CENTER);
 
         JPanel numberPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        numberPanel.add(new JLabel("Comment number (for delete):"));
-        numberPanel.add(commentNumberInput);
+        numberPanel.add(new JLabel("Select your comment in the table to delete it."));
         form.add(numberPanel, BorderLayout.SOUTH);
 
         panel.add(form, BorderLayout.NORTH);
@@ -199,10 +199,12 @@ for (int i = 0; i < tabs.getTabCount(); i++) {
         JPanel panel = interactionPanel();
 
         JPanel form = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        form.add(new JLabel("RealMoji ID:"));
-
-        realMojiInput = new JTextField(10);
-        form.add(realMojiInput);
+        form.add(new JLabel("My RealMoji:"));
+        realMojiBox = new JComboBox<>();
+        realMojiBox.setPreferredSize(new Dimension(200,30));
+        form.add(realMojiBox);
+        JButton load=BeRealTheme.button("Refresh RealMojis",false);
+        load.addActionListener(e->loadRealMojis());form.add(load);
 
         panel.add(form, BorderLayout.NORTH);
 
@@ -232,7 +234,7 @@ for (int i = 0; i < tabs.getTabCount(); i++) {
         JPanel panel = interactionPanel();
 
         JPanel form = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        form.add(new JLabel("User ID to tag:"));
+        form.add(new JLabel("Username to tag:"));
 
         taggedUserInput = new JTextField(10);
         form.add(taggedUserInput);
@@ -328,39 +330,59 @@ for (int i = 0; i < tabs.getTabCount(); i++) {
     private static class PostItem {
         int id;
         String caption;
-        String image;
-
-        PostItem(int id, String caption, String image) {
-            this.id = id;
-            this.caption = caption;
-            this.image = image;
+        String image,username;
+        Timestamp posted;
+        PostItem(int id,String caption,String image,String username,Timestamp posted) {
+            this.id=id;this.caption=caption;this.image=image;this.username=username;this.posted=posted;
         }
-
-        @Override
-        public String toString() {
-            return "Post #" + id;
+        @Override public String toString(){
+            return "@"+username+" · "+posted+" · "+(caption==null?"":caption);
         }
     }
 
+    private static final class RealMojiOption {
+        final int id; final String name;
+        RealMojiOption(int id,String name){this.id=id;this.name=name;}
+        @Override public String toString(){return name;}
+    }
+    private void loadRealMojis(){
+        realMojiBox.removeAllItems();
+        try(Connection c=DBConnection.getConnection();PreparedStatement st=c.prepareStatement("SELECT RealMojiID,Emoji FROM REALMOJIS WHERE UserID=? ORDER BY Emoji")){
+            st.setInt(1,currentUserID);try(ResultSet r=st.executeQuery()){
+                while(r.next())realMojiBox.addItem(new RealMojiOption(r.getInt(1),r.getString(2)));
+            }
+        }catch(SQLException ex){error(ex);}
+    }
+    private int selectedRealMoji(){
+        RealMojiOption item=(RealMojiOption)realMojiBox.getSelectedItem();
+        if(item==null)throw new IllegalArgumentException("Create a RealMoji from the dashboard first, then refresh this list.");
+        return item.id;
+    }
     private void loadPosts() {
 
-        String sql = "SELECT PostID, Caption, BackCam " +
-                     "FROM POST ORDER BY PostedAt DESC";
+        String sql = "SELECT P.PostID,P.Caption,P.BackCam,P.PostedAt,U.Username FROM POST P " +
+              "JOIN `USER` U ON U.UserID=P.UserID " +
+              "WHERE COALESCE(U.AccountStatus,'Active')='Active' AND " +
+              "(P.UserID=? OR U.Account_Type='Public' OR (EXISTS " +
+              "(SELECT 1 FROM FRIENDSHIP F WHERE F.Status='Accepted' AND " +
+              "((F.Requester_ID=? AND F.Receiver_ID=P.UserID) OR (F.Receiver_ID=? AND F.Requester_ID=P.UserID))) " +
+              "AND EXISTS (SELECT 1 FROM POST OWN WHERE OWN.UserID=?))) " +
+              "ORDER BY P.PostedAt DESC";
 
         try (Connection con = DBConnection.getConnection();
-             PreparedStatement st = con.prepareStatement(sql);
-             ResultSet rs = st.executeQuery()) {
-
+             PreparedStatement st = con.prepareStatement(sql)) {
+            for(int i=1;i<=4;i++) st.setInt(i,currentUserID);
+            try(ResultSet rs=st.executeQuery()){
             postBox.removeAllItems();
 
             while (rs.next()) {
                 postBox.addItem(new PostItem(
                     rs.getInt("PostID"),
                     rs.getString("Caption"),
-                    rs.getString("BackCam")
+                    rs.getString("BackCam"),rs.getString("Username"),rs.getTimestamp("PostedAt")
                 ));
             }
-
+            }
             showSelectedPost();
 
         } catch (SQLException e) {
@@ -416,7 +438,7 @@ for (int i = 0; i < tabs.getTabCount(); i++) {
             }
 
             try (Connection con = DBConnection.getConnection()) {
-
+                if(!BeRealAccess.canInteract(con,currentUserID,postID))throw new SQLException("Only confirmed friends who have posted can comment.");
                 // Obtain the next comment number for this post
                 String nextSQL =
                     "SELECT COALESCE(MAX(CommentNumber), 0) + 1 " +
@@ -460,7 +482,9 @@ for (int i = 0; i < tabs.getTabCount(); i++) {
 
         try {
             int postID = selectedPostID();
-            int number = positiveID(commentNumberInput);
+            int row=commentsTable.getSelectedRow();
+            if(row<0){message("Select your comment in the comments table first.");return;}
+            int number=Integer.parseInt(String.valueOf(commentsTable.getValueAt(row,0)));
 
             String sql =
                 "DELETE FROM COMMENT " +
@@ -504,7 +528,7 @@ for (int i = 0; i < tabs.getTabCount(); i++) {
     private void addReaction() {
         try {
             int postID = selectedPostID();
-            int realMojiID = positiveID(realMojiInput);
+            int realMojiID = selectedRealMoji();
 
             String sql =
                 "INSERT INTO REACTS_WITH " +
@@ -512,7 +536,11 @@ for (int i = 0; i < tabs.getTabCount(); i++) {
 
             try (Connection con = DBConnection.getConnection();
                  PreparedStatement st = con.prepareStatement(sql)) {
-
+                if(!BeRealAccess.canInteract(con,currentUserID,postID))throw new SQLException("Only confirmed friends who have posted can react.");
+                try(PreparedStatement owned=con.prepareStatement("SELECT COUNT(*) FROM REALMOJIS WHERE RealMojiID=? AND UserID=?")){
+                    owned.setInt(1,realMojiID);owned.setInt(2,currentUserID);
+                    try(ResultSet rs=owned.executeQuery()){rs.next();if(rs.getInt(1)==0)throw new SQLException("Choose a RealMoji you created.");}
+                }
                 st.setInt(1, currentUserID);
                 st.setInt(2, postID);
                 st.setInt(3, realMojiID);
@@ -530,7 +558,7 @@ for (int i = 0; i < tabs.getTabCount(); i++) {
     private void deleteReaction() {
         try {
             int postID = selectedPostID();
-            int realMojiID = positiveID(realMojiInput);
+            int realMojiID = selectedRealMoji();
 
             String sql =
                 "DELETE FROM REACTS_WITH " +
@@ -575,7 +603,8 @@ for (int i = 0; i < tabs.getTabCount(); i++) {
     private void addTag() {
         try {
             int postID = selectedPostID();
-            int taggedID = positiveID(taggedUserInput);
+            int taggedID;
+            try(Connection c=DBConnection.getConnection()){ taggedID=BeRealAccess.userId(c,taggedUserInput.getText().trim()); }
 
             // Only the post owner can add tags
             if (!ownsPost(postID)) {
@@ -605,7 +634,8 @@ for (int i = 0; i < tabs.getTabCount(); i++) {
     private void deleteTag() {
         try {
             int postID = selectedPostID();
-            int taggedID = positiveID(taggedUserInput);
+            int taggedID;
+            try(Connection c=DBConnection.getConnection()){ taggedID=BeRealAccess.userId(c,taggedUserInput.getText().trim()); }
 
             if (!ownsPost(postID)) {
                 message("You can only remove tags from your own posts.");
