@@ -1,4 +1,4 @@
--- 1. TWO-TABLE JOIN
+-- 1. Two-table JOIN
 -- Retrieve pending friendship requests
 -- along with the requester's username
 
@@ -11,8 +11,8 @@ WHERE F.Status = 'Pending';
 
 -- -----------------------------------------------------
 
--- 2. THREE-TABLE JOIN
--- Retrieve public posts for a specific moment
+-- 2. Three-table Join
+-- Retrieve public posts for  specific moment
 
 SELECT
     P.PostID, U.Username, P.FrontCam, P.BackCam,
@@ -27,7 +27,7 @@ WHERE M.MomentID = 2 AND M.TimeZone = 'Asia/Riyadh'
 
 -- -----------------------------------------------------
 
--- 3. Retrieve comments with usernames
+-- 3- Retrieve comments with usernames
 
 SELECT
     C.PostID, C.CommentNumber, C.Content, C.TimePosted, U.Username
@@ -37,7 +37,7 @@ FROM COMMENT C JOIN `USER` U
 
 -- -----------------------------------------------------
 
--- 4. Retrieve reactions with RealMoji details
+-- 4 Retrieve reactions with RealMoji details
 
 SELECT
     RW.UserID, RW.PostID, P.PostedAt, R.Emoji, R.Image

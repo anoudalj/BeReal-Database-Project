@@ -6,14 +6,14 @@ INSERT INTO MOMENT
 VALUES
 (3, '21:00:00', 'Asia/Riyadh', '2026-11-14');
 
--- 2. UPDATE: change the time of the new moment
+-- 2. UPDATE : change the time of the new moment
 UPDATE MOMENT
 SET Time = '21:15:00'
 WHERE MomentID = 3;
 
--- 3. RETRIEVE: view all moments
+-- 3 RETRIEVE: view all moments
 SELECT * FROM MOMENT;
 
--- 4. DELETE: remove the new moment (no post uses it)
+-- 4. delete: remove the new moment (no post uses it)
 DELETE FROM MOMENT
 WHERE MomentID = 3;
