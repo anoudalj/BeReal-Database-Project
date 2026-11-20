@@ -1,10 +1,122 @@
--- --------------------------------------------------------
--- Host:                         127.0.0.1
--- Server version:               26.10.0 - MySQL Community Server - GPL
--- Server OS:                    macos15
--- HeidiSQL Version:             12.22.1.841
--- --------------------------------------------------------
+-- BeReal database: structure and sample data (CSC380 Phase 3)
+-- Run this whole file to (re)create the Bereal database.
 
+DROP DATABASE IF EXISTS `Bereal`;
+CREATE DATABASE `Bereal`
+  DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+USE `Bereal`;
+
+-- USER
+CREATE TABLE IF NOT EXISTS `USER` (
+  `UserID` int NOT NULL AUTO_INCREMENT,
+  `Email` varchar(255) NOT NULL,
+  `Username` varchar(50) NOT NULL,
+  `Password` varchar(255) NOT NULL,
+  `Bio` text,
+  `DOB` date DEFAULT NULL,
+  `Account_Type` varchar(30) DEFAULT NULL,
+  `UserType` varchar(30) DEFAULT NULL,
+  `JoinDate` date DEFAULT NULL,
+  `ProfilePicture` varchar(255) DEFAULT NULL,
+  `AccountStatus` varchar(30) DEFAULT NULL,
+  PRIMARY KEY (`UserID`),
+  UNIQUE KEY `Email` (`Email`),
+  UNIQUE KEY `Username` (`Username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- MOMENT
+CREATE TABLE IF NOT EXISTS `MOMENT` (
+  `MomentID` int NOT NULL AUTO_INCREMENT,
+  `Time` time NOT NULL,
+  `TimeZone` varchar(50) NOT NULL,
+  `Date` date NOT NULL,
+  PRIMARY KEY (`MomentID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- FRIENDSHIP
+CREATE TABLE IF NOT EXISTS `FRIENDSHIP` (
+  `Friendship_id` int NOT NULL AUTO_INCREMENT,
+  `Date_Requested` date NOT NULL,
+  `ApprovedDate` date DEFAULT NULL,
+  `Requester_ID` int NOT NULL,
+  `Receiver_ID` int NOT NULL,
+  `Status` varchar(10) NOT NULL DEFAULT 'Pending',
+  PRIMARY KEY (`Friendship_id`),
+  UNIQUE KEY `uq_friendship_pair` (`Requester_ID`,`Receiver_ID`),
+  KEY `Receiver_ID` (`Receiver_ID`),
+  CONSTRAINT `friendship_ibfk_1` FOREIGN KEY (`Requester_ID`) REFERENCES `USER` (`UserID`),
+  CONSTRAINT `friendship_ibfk_2` FOREIGN KEY (`Receiver_ID`) REFERENCES `USER` (`UserID`),
+  CONSTRAINT `chk_friendship_status` CHECK (`Status` IN ('Pending','Accepted')),
+  CONSTRAINT `chk_friendship_self` CHECK (`Requester_ID` <> `Receiver_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- POST
+CREATE TABLE IF NOT EXISTS `POST` (
+  `PostID` int NOT NULL AUTO_INCREMENT,
+  `FrontCam` varchar(255) NOT NULL,
+  `BackCam` varchar(255) NOT NULL,
+  `Caption` varchar(255) DEFAULT NULL,
+  `RetakeCount` int DEFAULT '0',
+  `HoursLate` decimal(5,2) DEFAULT '0.00',
+  `PostedAt` datetime NOT NULL,
+  `UserID` int NOT NULL,
+  `MomentID` int NOT NULL,
+  PRIMARY KEY (`PostID`),
+  KEY `fk_post_user` (`UserID`),
+  KEY `fk_post_moment` (`MomentID`),
+  CONSTRAINT `fk_post_user` FOREIGN KEY (`UserID`) REFERENCES `USER` (`UserID`),
+  CONSTRAINT `fk_post_moment` FOREIGN KEY (`MomentID`) REFERENCES `MOMENT` (`MomentID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- COMMENT
+CREATE TABLE IF NOT EXISTS `COMMENT` (
+  `PostID` int NOT NULL,
+  `CommentNumber` int NOT NULL,
+  `Content` text NOT NULL,
+  `TimePosted` datetime NOT NULL,
+  `UserID` int NOT NULL,
+  PRIMARY KEY (`PostID`,`CommentNumber`),
+  KEY `UserID` (`UserID`),
+  CONSTRAINT `comment_ibfk_1` FOREIGN KEY (`PostID`) REFERENCES `POST` (`PostID`) ON DELETE CASCADE,
+  CONSTRAINT `comment_ibfk_2` FOREIGN KEY (`UserID`) REFERENCES `USER` (`UserID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- REALMOJIS
+CREATE TABLE IF NOT EXISTS `REALMOJIS` (
+  `RealMojiID` int NOT NULL AUTO_INCREMENT,
+  `Emoji` varchar(50) NOT NULL,
+  `Image` varchar(255) NOT NULL,
+  `UserID` int NOT NULL,
+  PRIMARY KEY (`RealMojiID`),
+  KEY `UserID` (`UserID`),
+  CONSTRAINT `realmojis_ibfk_1` FOREIGN KEY (`UserID`) REFERENCES `USER` (`UserID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- REACTS_WITH
+CREATE TABLE IF NOT EXISTS `REACTS_WITH` (
+  `UserID` int NOT NULL,
+  `PostID` int NOT NULL,
+  `RealMojiID` int NOT NULL,
+  PRIMARY KEY (`UserID`,`PostID`,`RealMojiID`),
+  KEY `FK_REACTS_WITH_POST` (`PostID`),
+  KEY `FK_REACTS_WITH_REALMOJIS` (`RealMojiID`),
+  CONSTRAINT `FK_REACTS_WITH_USER` FOREIGN KEY (`UserID`) REFERENCES `USER` (`UserID`),
+  CONSTRAINT `FK_REACTS_WITH_POST` FOREIGN KEY (`PostID`) REFERENCES `POST` (`PostID`) ON DELETE CASCADE,
+  CONSTRAINT `FK_REACTS_WITH_REALMOJIS` FOREIGN KEY (`RealMojiID`) REFERENCES `REALMOJIS` (`RealMojiID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- TAGGED_ON
+CREATE TABLE IF NOT EXISTS `TAGGED_ON` (
+  `UserID` int NOT NULL,
+  `PostID` int NOT NULL,
+  PRIMARY KEY (`UserID`,`PostID`),
+  KEY `PostID` (`PostID`),
+  CONSTRAINT `tagged_on_ibfk_1` FOREIGN KEY (`UserID`) REFERENCES `USER` (`UserID`),
+  CONSTRAINT `tagged_on_ibfk_2` FOREIGN KEY (`PostID`) REFERENCES `POST` (`PostID`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+-- ===================== SAMPLE DATA =====================
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET NAMES utf8 */;
 /*!50503 SET NAMES utf8mb4 */;
@@ -14,7 +126,7 @@
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
--- Dumping data for table Bereal.COMMENT: ~32 rows (approximately)
+-- Dumping data for table Bereal.COMMENT
 INSERT INTO `COMMENT` (`PostID`, `CommentNumber`, `Content`, `TimePosted`, `UserID`) VALUES
 	(2, 1, 'love this', '2026-11-18 11:00:53', 3),
 	(103, 1, 'Nice view!', '2026-11-01 15:00:00', 106),
@@ -47,9 +159,13 @@ INSERT INTO `COMMENT` (`PostID`, `CommentNumber`, `Content`, `TimePosted`, `User
 	(127, 2, 'Yes!', '2026-11-18 09:45:00', 111),
 	(130, 1, 'Great picture', '2026-11-19 22:00:00', 114),
 	(130, 2, 'Love it', '2026-11-19 22:10:00', 105),
-	(132, 1, 'Late night vibes', '2026-11-19 23:40:00', 113);
+	(132, 1, 'Late night vibes', '2026-11-19 23:40:00', 113),
+	(201, 10, 'Looks amazing!', '2026-11-20 14:10:00', 105),
+	(201, 11, 'Enjoy your coffee', '2026-11-20 14:15:00', 107),
+	(201, 12, 'Thanks everyone!', '2026-11-20 14:20:00', 101),
+	(202, 1, 'So jealous!', '2026-11-20 14:12:00', 101);
 
--- Dumping data for table Bereal.FRIENDSHIP: ~29 rows (approximately)
+-- Dumping data for table Bereal.FRIENDSHIP
 INSERT INTO `FRIENDSHIP` (`Friendship_id`, `Date_Requested`, `ApprovedDate`, `Requester_ID`, `Receiver_ID`, `Status`) VALUES
 	(1, '2026-11-15', '2026-11-19', 3, 2, 'Accepted'),
 	(2, '2026-11-19', NULL, 2, 3, 'Pending'),
@@ -79,9 +195,10 @@ INSERT INTO `FRIENDSHIP` (`Friendship_id`, `Date_Requested`, `ApprovedDate`, `Re
 	(125, '2026-11-16', NULL, 103, 104, 'Pending'),
 	(126, '2026-11-17', NULL, 114, 102, 'Pending'),
 	(127, '2026-11-17', '2026-11-18', 103, 105, 'Accepted'),
-	(128, '2026-11-19', NULL, 111, 103, 'Pending');
+	(128, '2026-11-19', NULL, 111, 103, 'Pending'),
+	(302, '2026-10-25', '2026-10-26', 105, 101, 'Accepted');
 
--- Dumping data for table Bereal.MOMENT: ~1 rows (approximately)
+-- Dumping data for table Bereal.MOMENT
 INSERT INTO `MOMENT` (`MomentID`, `Time`, `TimeZone`, `Date`) VALUES
 	(2, '22:00:00', 'Asia/Riyadh', '2026-11-13'),
 	(3, '14:30:00', 'Asia/Riyadh', '2026-11-01'),
@@ -93,11 +210,12 @@ INSERT INTO `MOMENT` (`MomentID`, `Time`, `TimeZone`, `Date`) VALUES
 	(9, '11:35:00', 'Asia/Riyadh', '2026-11-14'),
 	(10, '19:05:00', 'Asia/Riyadh', '2026-11-16'),
 	(11, '08:50:00', 'Asia/Riyadh', '2026-11-18'),
-	(12, '21:25:00', 'Asia/Riyadh', '2026-11-19');
+	(12, '21:25:00', 'Asia/Riyadh', '2026-11-19'),
+	(123, '14:00:00', 'Europe', '2026-11-20');
 
--- Dumping data for table Bereal.POST: ~1 rows (approximately)
+-- Dumping data for table Bereal.POST
 INSERT INTO `POST` (`PostID`, `FrontCam`, `BackCam`, `Caption`, `RetakeCount`, `HoursLate`, `PostedAt`, `UserID`, `MomentID`) VALUES
-	(2, 'front2.jpg', 'back2.jpg', 'Updated BeReal caption', 0, 0.00, '2026-11-12 21:35:00', 3, 2),
+	(2, 'images/front2.jpg', 'images/back2.jpg', 'Updated BeReal caption', 0, 0.00, '2026-11-12 21:35:00', 3, 2),
 	(103, 'images/front3.jpg', 'images/back3.jpg', 'Afternoon coffee', 0, 0.00, '2026-11-01 14:31:20', 105, 3),
 	(104, 'images/front4.jpg', 'images/back4.jpg', 'Lab day', 1, 0.25, '2026-11-01 14:45:00', 106, 3),
 	(105, 'images/front5.jpg', 'images/back5.jpg', 'Forgot to post', 2, 1.50, '2026-11-01 16:00:00', 107, 3),
@@ -127,9 +245,13 @@ INSERT INTO `POST` (`PostID`, `FrontCam`, `BackCam`, `Caption`, `RetakeCount`, `
 	(129, 'images/front29.jpg', 'images/back29.jpg', NULL, 0, 6.00, '2026-11-18 14:50:00', 112, 11),
 	(130, 'images/front30.jpg', 'images/back30.jpg', 'Study night', 0, 0.00, '2026-11-19 21:26:20', 113, 12),
 	(131, 'images/front31.jpg', 'images/back31.jpg', 'Quick snack', 1, 0.40, '2026-11-19 21:49:00', 114, 12),
-	(132, 'images/front32.jpg', 'images/back32.jpg', 'Late night vibes', 0, 1.75, '2026-11-19 23:10:00', 105, 12);
+	(132, 'images/front32.jpg', 'images/back32.jpg', 'Late night vibes', 0, 1.75, '2026-11-19 23:10:00', 105, 12),
+	(201, 'images/front201.jpg', 'images/back201.jpg', 'Coffee break in Paris', 2, 0.05, '2026-11-20 14:03:00', 101, 123),
+	(202, 'images/front202.jpg', 'images/back202.jpg', 'Sunny afternoon in Madrid', 0, 0.10, '2026-11-20 14:06:00', 105, 123),
+	(203, 'images/front203.jpg', 'images/back203.jpg', 'Quiet library', 1, 0.02, '2026-11-20 14:01:00', 106, 123),
+	(204, 'images/front204.jpg', 'images/back204.jpg', 'Running late', 0, 0.50, '2026-11-20 14:30:00', 107, 123);
 
--- Dumping data for table Bereal.REACTS_WITH: ~0 rows (approximately)
+-- Dumping data for table Bereal.REACTS_WITH
 INSERT INTO `REACTS_WITH` (`UserID`, `PostID`, `RealMojiID`) VALUES
 	(102, 121, 118),
 	(102, 122, 119),
@@ -178,9 +300,15 @@ INSERT INTO `REACTS_WITH` (`UserID`, `PostID`, `RealMojiID`) VALUES
 	(117, 115, 148),
 	(118, 117, 149),
 	(119, 132, 150),
-	(120, 132, 151);
+	(120, 132, 151),
+	(101, 201, 10),
+	(105, 201, 10),
+	(102, 201, 11),
+	(107, 202, 11),
+	(108, 103, 11),
+	(101, 202, 12);
 
--- Dumping data for table Bereal.REALMOJIS: ~2 rows (approximately)
+-- Dumping data for table Bereal.REALMOJIS
 INSERT INTO `REALMOJIS` (`RealMojiID`, `Emoji`, `Image`, `UserID`) VALUES
 	(18, 'Happy', 'happy.jpg', 2),
 	(19, 'Loving', 'hearts.jpg', 2),
@@ -217,9 +345,12 @@ INSERT INTO `REALMOJIS` (`RealMojiID`, `Emoji`, `Image`, `UserID`) VALUES
 	(148, 'Happy', 'realmojis/u17_happy.jpg', 117),
 	(149, 'Hearts', 'realmojis/u18_hearts.jpg', 118),
 	(150, 'Fire', 'realmojis/u19_fire.jpg', 119),
-	(151, 'Laugh', 'realmojis/u20_laugh.jpg', 120);
+	(151, 'Laugh', 'realmojis/u20_laugh.jpg', 120),
+	(10, 'Fire', 'realmojis/u123_fire.jpg', 123),
+	(11, 'Clap', 'realmojis/u123_clap.jpg', 123),
+	(12, 'Happy', 'realmojis/u101_happy.jpg', 101);
 
--- Dumping data for table Bereal.TAGGED_ON: ~0 rows (approximately)
+-- Dumping data for table Bereal.TAGGED_ON
 INSERT INTO `TAGGED_ON` (`UserID`, `PostID`) VALUES
 	(103, 125),
 	(105, 104),
@@ -249,20 +380,21 @@ INSERT INTO `TAGGED_ON` (`UserID`, `PostID`) VALUES
 	(117, 117),
 	(118, 118),
 	(119, 119),
-	(120, 121);
+	(120, 121),
+	(102, 201);
 
--- Dumping data for table Bereal.USER: ~7 rows (approximately)
+-- Dumping data for table Bereal.USER
 INSERT INTO `USER` (`UserID`, `Email`, `Username`, `Password`, `Bio`, `DOB`, `Account_Type`, `UserType`, `JoinDate`, `ProfilePicture`, `AccountStatus`) VALUES
-	(2, 'testuser@example.com', 'testuser01', 'DemoPassword123', 'Computer Science student', '2004-05-15', 'Public', 'Regular', '2026-11-15', 'new_profile.jpg', 'Active'),
-	(3, 'seconduser@example.com', 'seconduser02', 'DemoPassword456', 'Enjoying BeReal', '2003-08-20', 'Public', 'Regular', '2026-11-15', NULL, 'Active'),
+	(2, 'testuser@example.com', 'testuser01', 'pbkdf2:120000:gcMOQbHeHURkpeJUkdg2gg==:TsdPdp7pY1WNUhNBr3l14mRTJ5LQTNZicsFwZsghJ6U=', 'Computer Science student', '2004-05-15', 'Public', 'Regular', '2026-11-15', 'new_profile.jpg', 'Active'),
+	(3, 'seconduser@example.com', 'seconduser02', 'pbkdf2:120000:+BkZ1OGF1csDVqVx/xiQ4Q==:Rzg+5JPumagZwmBIahiWvl2qUclgSuqsQlm6/XjRvOQ=', 'Enjoying BeReal', '2003-08-20', 'Public', 'Regular', '2026-11-15', NULL, 'Active'),
 	(8, 'lwia2@gmail.com', 'sudeldjf', 'pbkdf2:120000:g261np1SadYnyAqzV6NtfA==:SaCbKiQHNze7weShNb83luRDBF0v5dEFDc2pZfzWrs0=', 'hdhd', '2000-10-09', 'Public', 'Regular', '2026-11-19', NULL, 'Active'),
 	(9, 'lwaibhdalal@gmail.com', 'dalal183', 'pbkdf2:120000:k2/1lD4PQuclnqKMYCwgWg==:35xpBLGHDDjbW0RmIgIHt7tJrpPJQKhQr8dqtOUBjGc=', '', '2006-03-18', 'Public', 'Regular', '2026-11-20', NULL, 'Active'),
 	(10, 'd.m.lwaibh@gmail.com', 'admin1', 'pbkdf2:120000:pWGillkqhicJZ/4IBvLr0Q==:3+iNnnXdpiFZSlcRt2gGxRFYGkBeZ3YExmJ+euMULas=', '', '2007-10-09', 'Public', 'Admin', '2026-11-20', NULL, 'Active'),
 	(12, 'admin@gmail.com', 'admin5', 'pbkdf2:120000:7K5YZVj8LMWNhKg+NfOtHw==:RtajcHS5wVFFyh7bINDtia6Wfp5ZZQu2eiwbfgqoSL4=', '', NULL, 'Private', 'Admin', '2026-11-20', NULL, 'Active'),
 	(13, 'admin2@gmail.com', 'aadmin1', 'pbkdf2:120000:J6hMK+RpyzM7qh6z57kKeQ==:2N4QHS6cYREyGUo4j7mn6PmePqJ1cIyPC1AC1LuPl6U=', '', NULL, 'Private', 'Admin', '2026-11-20', NULL, 'Active'),
-	(102, 'nasser.f.t@example.com', 'nasser_f_t', 'pbkdf2:120000:SALT0102==:HASH0102=', 'Test account A', '2003-04-10', 'Public', 'Regular', '2026-08-15', 'profiles/nasser.jpg', 'Active'),
+	(102, 'nasser.f.t@example.com', 'nasser_f_t', 'pbkdf2:120000:IQexZ2IBiGzKiPtIewcA5A==:FmfbrWXc1ULX1M2kwvm0iwB5n8xYeWmfZ9jUpSuzPZI=', 'Test account A', '2003-04-10', 'Public', 'Regular', '2026-08-15', 'profiles/nasser.jpg', 'Active'),
 	(103, 'abeer.c.t@example.com', 'abeer_c_t', 'pbkdf2:120000:SALT0103==:HASH0103=', 'Enjoying BeReal', '2003-09-20', 'Public', 'Regular', '2026-08-16', NULL, 'Active'),
-	(104, 'admin.t@example.com', 'admin_t', 'pbkdf2:120000:SALT0104==:HASH0104=', 'Admin test account', '2000-02-02', 'Public', 'Admin', '2026-08-17', NULL, 'Active'),
+	(104, 'admin.t@example.com', 'admin_t', 'pbkdf2:120000:qoDDf7ZuuoQiHZcVu6qrBg==:5eQeGavyq6nsY8u+Va2DWFlyv48GxpJLLrAsN1gvUjc=', 'Admin test account', '2000-02-02', 'Public', 'Admin', '2026-08-17', NULL, 'Active'),
 	(105, 'sara.ali.t@example.com', 'sara_ali_t', 'pbkdf2:120000:SALT0005==:HASH0005=', 'Coffee and sunsets', '2003-02-11', 'Public', 'Regular', '2026-08-20', 'profiles/sara.jpg', 'Active'),
 	(106, 'omar.k.t@example.com', 'omar_k_t', 'pbkdf2:120000:SALT0006==:HASH0006=', 'CS student', '2002-07-30', 'Private', 'Regular', '2026-08-22', 'profiles/omar.jpg', 'Active'),
 	(107, 'lina.h.t@example.com', 'lina_h_t', 'pbkdf2:120000:SALT0007==:HASH0007=', 'Books and tea', '2004-01-09', 'Public', 'Regular', '2026-08-25', NULL, 'Active'),
@@ -278,7 +410,10 @@ INSERT INTO `USER` (`UserID`, `Email`, `Username`, `Password`, `Bio`, `DOB`, `Ac
 	(117, 'hessa.z.t@example.com', 'hessa_z_t', 'pbkdf2:120000:SALT0017==:HASH0017=', 'Foodie', '2003-10-12', 'Public', 'Regular', '2026-09-20', 'profiles/hessa.jpg', 'Suspended'),
 	(118, 'turki.w.t@example.com', 'turki_w_t', 'pbkdf2:120000:SALT0018==:HASH0018=', 'New here', '2002-05-31', 'Public', 'Regular', '2026-09-22', NULL, 'Deactivated'),
 	(119, 'jood.l.t@example.com', 'jood_l_t', 'pbkdf2:120000:SALT0019==:HASH0019=', 'Sunsets and road trips', '2004-07-21', 'Public', 'Regular', '2026-09-25', 'profiles/jood.jpg', 'Active'),
-	(120, 'mishari.g.t@example.com', 'mishari_g_t', 'pbkdf2:120000:SALT0020==:HASH0020=', 'Moderator', '1998-12-01', 'Public', 'Admin', '2026-09-28', NULL, 'Active');
+	(120, 'mishari.g.t@example.com', 'mishari_g_t', 'pbkdf2:120000:SALT0020==:HASH0020=', 'Moderator', '1998-12-01', 'Public', 'Admin', '2026-09-28', NULL, 'Active'),
+	(101, 'sara@gmail.com', 'sara101', 'pbkdf2:120000:jILKx0dApT8f8bYb60BqBg==:nFDIjGDP0n4WD00JSYUllGgWAIemxJ+wIzEDSv/182o=', 'Coffee lover and early riser', '2003-05-15', 'Public', 'Regular', '2026-10-19', 'profiles/sara101.jpg', 'Active'),
+	(122, 'promo122@example.com', 'promo_122', 'pbkdf2:120000:SALT0122==:HASH0122=', 'Best deals here', '1987-02-14', 'Public', 'Regular', '2026-10-25', NULL, 'UnderReview'),
+	(123, 'rawan123@example.com', 'rawan_123', 'pbkdf2:120000:SALT0123==:HASH0123=', 'I design RealMojis', '1989-06-03', 'Public', 'Regular', '2026-10-01', NULL, 'Active');
 
 /*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
