@@ -3,10 +3,16 @@ import javax.crypto.spec.PBEKeySpec;
 import javax.swing.*;
 import java.awt.*;
 import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.sql.*;
 import java.util.Base64;
+import java.util.Arrays;
 
 public class Main extends JFrame {
+    // Demo-only authorization password. Change this before sharing the project.
+    // This is not secure against anyone who can inspect the application code.
+    private static final String ADMIN_CREATION_PASSWORD = "admin6";
+    private int failedAdminAttempts = 0;
     private final JPanel content = BeRealTheme.panel(new BorderLayout());
     public Main() {
         BeRealTheme.install(); setTitle("BeReal."); setSize(540, 860);
@@ -44,7 +50,99 @@ public class Main extends JFrame {
         stack(p).add(mark,0);stack(p).add(Box.createVerticalStrut(56),1);
         JButton create=BeRealTheme.button("Create an account",true),login=BeRealTheme.button("Log in",false);
         create.addActionListener(e -> new UserManagementGUI().setVisible(true));
-        login.addActionListener(e -> showLogin());addButton(p,create);addButton(p,login);showPage(p);
+        login.addActionListener(e -> showLogin());addButton(p,create);addButton(p,login);
+        JButton admin=BeRealTheme.button("Create admin account",false);
+        admin.addActionListener(e -> showAdminGate());
+        addButton(p,admin);
+        showPage(p);
+    }
+
+    // Step 1: Require the separate admin creation password BEFORE showing registration.
+    private void showAdminGate() {
+        JPanel p=page("Admin authorization", "Enter the admin creation password to continue.");
+        JPasswordField key=new JPasswordField(22);
+        field(p,"Admin creation password",key);
+        JButton unlock=BeRealTheme.button("Continue to admin registration",true);
+        JButton back=BeRealTheme.button("Back",false);
+        unlock.addActionListener(e -> {
+            char[] supplied=key.getPassword();
+            try {
+                if (failedAdminAttempts >= 5) {
+                    error("Too many incorrect attempts. Restart the app to try again.");
+                    return;
+                }
+                char[] expected=ADMIN_CREATION_PASSWORD.toCharArray();
+                boolean valid=MessageDigest.isEqual(
+                    new String(supplied).getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                    ADMIN_CREATION_PASSWORD.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                Arrays.fill(expected,'\0');
+                if (!valid) {
+                    failedAdminAttempts++;
+                    error("Incorrect admin creation password.");
+                    key.setText("");
+                    return;
+                }
+                failedAdminAttempts=0;
+                showAdminRegistration();
+            } finally { Arrays.fill(supplied,'\0'); }
+        });
+        key.addActionListener(e -> unlock.doClick());
+        back.addActionListener(e -> showWelcome());
+        addButton(p,unlock);addButton(p,back);
+        showPage(p);getRootPane().setDefaultButton(unlock);
+    }
+
+    // Step 2: Only accessible after successful authorization.
+    private void showAdminRegistration() {
+        JPanel p=page("Create admin account", "Register a new administrator account.");
+        JTextField username=new JTextField(22), email=new JTextField(22);
+        JPasswordField password=new JPasswordField(22), confirm=new JPasswordField(22);
+        field(p,"Admin username",username);
+        field(p,"Admin email",email);
+        field(p,"New account password",password);
+        field(p,"Confirm account password",confirm);
+        JButton create=BeRealTheme.button("Create admin",true),back=BeRealTheme.button("Back",false);
+        create.addActionListener(e -> createAdmin(username.getText(),email.getText(),password.getPassword(),confirm.getPassword()));
+        back.addActionListener(e -> showWelcome());
+        addButton(p,create);addButton(p,back);showPage(p);
+        getRootPane().setDefaultButton(create);
+    }
+    private static String hashNewPassword(char[] password) throws Exception {
+        byte[] salt=new byte[16]; new SecureRandom().nextBytes(salt);
+        PBEKeySpec spec=new PBEKeySpec(password,salt,120000,256);
+        try {
+            byte[] hash=SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).getEncoded();
+            return "pbkdf2:120000:"+Base64.getEncoder().encodeToString(salt)+":"+Base64.getEncoder().encodeToString(hash);
+        } finally { spec.clearPassword(); }
+    }
+    private void createAdmin(String rawUsername,String rawEmail,char[] password,char[] confirmation) {
+        try {
+            String username=rawUsername.trim(),email=rawEmail.trim();
+            if(username.isEmpty() || username.length()>50) { error("Enter a username of up to 50 characters."); return; }
+            if(email.length()>255 || !email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+                error("Enter a valid email address."); return;
+            }
+            if(password.length<8) { error("Account password must have at least 8 characters."); return; }
+            if(!Arrays.equals(password,confirmation)) { error("Account passwords do not match."); return; }
+            int choice=JOptionPane.showConfirmDialog(this,"Create admin account @"+username+"?",
+                    "Confirm admin account",JOptionPane.YES_NO_OPTION,JOptionPane.WARNING_MESSAGE);
+            if(choice!=JOptionPane.YES_OPTION) return;
+            String sql="INSERT INTO `USER` (Email, Username, Password, Bio, DOB, Account_Type, UserType, ProfilePicture, AccountStatus, JoinDate) "
+                    +"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            try(Connection c=DBConnection.getConnection();PreparedStatement st=c.prepareStatement(sql)) {
+                st.setString(1,email); st.setString(2,username); st.setString(3,hashNewPassword(password));
+                st.setString(4,""); st.setNull(5,Types.DATE); st.setString(6,"Private");
+                st.setString(7,"Admin"); st.setNull(8,Types.VARCHAR); st.setString(9,"Active");
+                st.setDate(10,java.sql.Date.valueOf(java.time.LocalDate.now()));
+                if(st.executeUpdate()!=1) throw new SQLException("Account creation failed.");
+            }
+            JOptionPane.showMessageDialog(this,"Admin @"+username+" created. Log in using the Admin role and your new account password.");
+            showLogin();
+        } catch(SQLException ex) {
+            if("23000".equals(ex.getSQLState())) error("Username or email already exists.");
+            else error("Database error: "+ex.getMessage());
+        } catch(Exception ex) { error("Could not create admin account: "+ex.getMessage()); }
+        finally { Arrays.fill(password,'\0'); Arrays.fill(confirmation,'\0'); }
     }
     private void showLogin() {
         JPanel p=page("Welcome back.","Log in to see what your friends are up to.");
@@ -96,6 +194,7 @@ public class Main extends JFrame {
         });editor.setVisible(true); });bottom.add(capture,BorderLayout.NORTH);
         JPanel links=BeRealTheme.panel(new FlowLayout(FlowLayout.CENTER,8,0));
         if("Admin".equalsIgnoreCase(role)) {
+            JButton manage=BeRealTheme.button("Manage users & posts",false);manage.addActionListener(e -> new AdminManagementGUI(userId).setVisible(true));links.add(manage);
             JButton queries=BeRealTheme.button("Advanced Queries",false);queries.addActionListener(e -> new AdvancedQueriesGUI().setVisible(true));links.add(queries);
         }
         JButton logout=BeRealTheme.button("Log out",false);logout.addActionListener(e -> showWelcome());links.add(logout);

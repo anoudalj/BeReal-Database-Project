@@ -12,7 +12,7 @@ public class DBConnection {
     // Read from environment variables (run.sh / run.bat ask for the password)
     private static final String URL = env("DB_URL", "jdbc:mysql://127.0.0.1:3306/Bereal");
     private static final String USER = env("DB_USER", "root");
-    private static final String PASSWORD = env("DB_PASSWORD", "YOUR_MYSQL_PASSWORD");
+    private static final String PASSWORD = env("DB_PASSWORD", "095421");
 
     private static String env(String key, String fallback) {
         String v = System.getenv(key);

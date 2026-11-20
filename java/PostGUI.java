@@ -88,6 +88,78 @@ public class PostGUI extends JFrame {
     }
     private void chooseImage(JTextField target){JFileChooser c=chooser();if(c.showOpenDialog(this)==JFileChooser.APPROVE_OPTION)target.setText(c.getSelectedFile().getAbsolutePath());}
     private void updatePost(){String id=JOptionPane.showInputDialog(this,"Post ID:");if(id==null)return;String caption=JOptionPane.showInputDialog(this,"New caption:");if(caption==null)return;String sql="UPDATE POST SET Caption=? WHERE PostID=?"+(currentUserId>0?" AND UserID=?":"");try(Connection c=DBConnection.getConnection();PreparedStatement s=c.prepareStatement(sql)){s.setString(1,caption);s.setInt(2,Integer.parseInt(id.trim()));if(currentUserId>0)s.setInt(3,currentUserId);message(s.executeUpdate()==1?"Post updated.":"Post not found or not yours.");}catch(Exception ex){error(ex);}}
-    private void deletePost(){String id=JOptionPane.showInputDialog(this,"Post ID to delete:");if(id==null)return;if(JOptionPane.showConfirmDialog(this,"Delete this BeReal?","Delete BeReal",JOptionPane.YES_NO_OPTION)!=JOptionPane.YES_OPTION)return;String sql="DELETE FROM POST WHERE PostID=?"+(currentUserId>0?" AND UserID=?":"");try(Connection c=DBConnection.getConnection();PreparedStatement s=c.prepareStatement(sql)){s.setInt(1,Integer.parseInt(id.trim()));if(currentUserId>0)s.setInt(2,currentUserId);message(s.executeUpdate()==1?"Post deleted.":"Post not found or not yours.");}catch(Exception ex){error(ex);}}
+    /** Display only the signed-in user's posts, then delete the selected post. */
+    private void deletePost() {
+        if (currentUserId <= 0) {
+            message("Log in before deleting a BeReal.");
+            return;
+        }
+
+        DefaultComboBoxModel<OwnedPost> model = new DefaultComboBoxModel<>();
+        String listSql = "SELECT PostID, Caption, PostedAt FROM POST WHERE UserID=? "
+                + "ORDER BY PostedAt DESC, PostID DESC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(listSql)) {
+            stmt.setInt(1, currentUserId);
+            try (ResultSet results = stmt.executeQuery()) {
+                while (results.next()) {
+                    model.addElement(new OwnedPost(results.getInt("PostID"),
+                            results.getString("Caption"), results.getTimestamp("PostedAt")));
+                }
+            }
+        } catch (SQLException ex) {
+            error(ex);
+            return;
+        }
+
+        if (model.getSize() == 0) {
+            message("You don't have any BeReals to delete.");
+            return;
+        }
+
+        JComboBox<OwnedPost> selector = new JComboBox<>(model);
+        selector.setPreferredSize(new Dimension(420, 36));
+        JPanel selection = BeRealTheme.panel(new BorderLayout(0, 10));
+        selection.add(BeRealTheme.label("Choose one of your BeReals:", 14, false), BorderLayout.NORTH);
+        selection.add(selector, BorderLayout.CENTER);
+        if (JOptionPane.showConfirmDialog(this, selection, "Delete a BeReal",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) return;
+
+        OwnedPost post = (OwnedPost) selector.getSelectedItem();
+        if (post == null) return;
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Permanently delete this BeReal?\n" + post,
+                "Confirm deletion", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        String deleteSql = "DELETE FROM POST WHERE PostID=? AND UserID=?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(deleteSql)) {
+            stmt.setInt(1, post.id);
+            stmt.setInt(2, currentUserId);
+            message(stmt.executeUpdate() == 1 ? "BeReal deleted." : "Post not found or no longer yours.");
+        } catch (SQLException ex) {
+            error(ex);
+        }
+    }
+
+    private static final class OwnedPost {
+        final int id;
+        final String caption;
+        final Timestamp postedAt;
+
+        OwnedPost(int id, String caption, Timestamp postedAt) {
+            this.id = id;
+            this.caption = caption;
+            this.postedAt = postedAt;
+        }
+
+        @Override public String toString() {
+            String text = caption == null || caption.isBlank() ? "(No caption)" : caption.trim();
+            if (text.length() > 55) text = text.substring(0, 52) + "...";
+            return (postedAt == null ? "Unknown date" : postedAt.toString()) + " — " + text;
+        }
+    }
+
     private void message(String s){JOptionPane.showMessageDialog(this,s);}private void error(Exception e){JOptionPane.showMessageDialog(this,"Error: "+e.getMessage(),"BeReal",JOptionPane.ERROR_MESSAGE);}public static void main(String[]a){SwingUtilities.invokeLater(()->new PostGUI().setVisible(true));}
 }
