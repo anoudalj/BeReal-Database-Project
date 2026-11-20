@@ -24,9 +24,9 @@ WHERE Emoji = 'Spam'
   AND UserID = (SELECT UserID FROM `USER` WHERE Username = 'spammer99');
 
 
--- ===================== INSERT =====================
 
--- Insert 1: add a BeReal notification time for a specific time zone
+
+-- Insert 1: add a BeReal notification time for specific time zone
 INSERT INTO MOMENT
 (MomentID, Time, TimeZone, Date)
 VALUES
@@ -39,29 +39,29 @@ VALUES
 (2, 2);
 
 
--- ===================== RETRIEVE (ONE TABLE) =====================
+-- Retrieve 
 
 -- Retrieve 1: all accounts currently marked under review
 SELECT UserID, Username, Email, AccountStatus
 FROM `USER`
 WHERE AccountStatus = 'UnderReview';
 
--- Retrieve 2: ID, username, email and date of birth of users over 35
+-- Retrieve 2: ID username email and date of birth for users over 35
 SELECT UserID, Username, Email, DOB
 FROM `USER`
 WHERE TIMESTAMPDIFF(YEAR, DOB, CURDATE()) > 35;
 
 
--- ===================== RETRIEVE (JOINS) =====================
+--  Retrieve (JOINS) 
 
--- Join (two tables): pending friendship requests with the requester's username
+-- Join (two tables): pending friendship requests with the requester username
 SELECT F.Friendship_id, U.Username AS Requester, F.Receiver_ID, F.Date_Requested
 FROM FRIENDSHIP F
 JOIN `USER` U
     ON F.Requester_ID = U.UserID
 WHERE F.Status = 'Pending';
 
--- Join (three tables): reactions made with RealMojis designed by the reported user
+-- Join (three tables): reactions made with RealMojis designed by  reported user
 SELECT RW.UserID AS Reactor, RW.PostID, P.PostedAt, R.Emoji
 FROM REACTS_WITH RW
 JOIN POST P
@@ -71,9 +71,9 @@ JOIN REALMOJIS R
 WHERE R.UserID = (SELECT UserID FROM `USER` WHERE Username = 'spammer99');
 
 
--- ===================== UPDATE =====================
+-- Update
 
--- Update 1: suspend the reported user's account
+-- Update 1: suspend the reported user account
 UPDATE `USER`
 SET AccountStatus = 'Suspended'
 WHERE Username = 'spammer99';
@@ -85,10 +85,10 @@ WHERE MomentID = 124
   AND TimeZone = 'Europe';
 
 
--- ===================== DELETE =====================
+-- Delete
 
 -- Delete 1: remove a post that violates community guidelines
--- (its comments, reactions and tags are deleted with it)
+-- with its comments, reactions and tags
 DELETE FROM POST
 WHERE Caption = 'Buy followers now'
   AND UserID = (SELECT UserID FROM `USER` WHERE Username = 'spammer99');
@@ -102,7 +102,7 @@ WHERE Emoji = 'Spam'
   AND UserID = (SELECT UserID FROM `USER` WHERE Username = 'spammer99');
 
 
--- ===================== CLEANUP (so the script can be run again) =====================
+--  CLEANUP (so the script can be run again) 
 DELETE FROM TAGGED_ON WHERE UserID = 2 AND PostID = 2;
 DELETE FROM MOMENT WHERE MomentID = 124;
 DELETE FROM `USER` WHERE Username = 'spammer99';

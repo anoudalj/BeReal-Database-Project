@@ -19,7 +19,7 @@ public class DBConnection {
         return (v == null || v.isBlank()) ? fallback : v;
     }
 
-    // Both spellings are accepted (dots or underscores in the version number)
+    // Both spelling are accepted (dots or underscores in the version number)
     private static final String[] JAR_NAMES = {
         "mysql-connector-j-26.10.0.jar",
         "mysql-connector-j-26_10_0.jar"
