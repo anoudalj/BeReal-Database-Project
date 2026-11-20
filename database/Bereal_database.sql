@@ -14,151 +14,271 @@
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
-
--- Dumping database structure for Bereal
-CREATE DATABASE IF NOT EXISTS `Bereal` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
-USE `Bereal`;
-
--- Dumping structure for table Bereal.COMMENT
-CREATE TABLE IF NOT EXISTS `COMMENT` (
-  `PostID` int NOT NULL,
-  `CommentNumber` int NOT NULL,
-  `Content` text NOT NULL,
-  `TimePosted` datetime NOT NULL,
-  `UserID` int NOT NULL,
-  PRIMARY KEY (`PostID`,`CommentNumber`),
-  KEY `UserID` (`UserID`),
-  CONSTRAINT `comment_ibfk_1` FOREIGN KEY (`PostID`) REFERENCES `POST` (`PostID`) ON DELETE CASCADE,
-  CONSTRAINT `comment_ibfk_2` FOREIGN KEY (`UserID`) REFERENCES `USER` (`UserID`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
--- Dumping data for table Bereal.COMMENT: ~0 rows (approximately)
+-- Dumping data for table Bereal.COMMENT: ~32 rows (approximately)
 INSERT INTO `COMMENT` (`PostID`, `CommentNumber`, `Content`, `TimePosted`, `UserID`) VALUES
-	(2, 1, 'love this', '2026-11-18 11:00:53', 3);
+	(2, 1, 'love this', '2026-11-18 11:00:53', 3),
+	(103, 1, 'Nice view!', '2026-11-01 15:00:00', 106),
+	(103, 2, 'Haha same here', '2026-11-01 15:20:30', 107),
+	(104, 1, 'Great shot', '2026-11-01 15:30:00', 105),
+	(105, 1, 'Late but worth it', '2026-11-01 16:30:00', 108),
+	(105, 2, 'Lol', '2026-11-01 17:05:00', 105),
+	(105, 3, 'Coffee time?', '2026-11-01 18:00:00', 106),
+	(106, 1, 'Good morning!', '2026-11-03 09:30:00', 109),
+	(107, 1, 'Study session?', '2026-11-03 11:40:00', 110),
+	(109, 1, 'Looks delicious', '2026-11-05 19:10:00', 111),
+	(109, 2, 'Recipe please', '2026-11-05 19:25:00', 112),
+	(110, 1, 'Love the vibe', '2026-11-05 19:00:00', 105),
+	(112, 1, 'Lunch break!', '2026-11-07 12:30:00', 113),
+	(112, 2, 'Enjoy!', '2026-11-07 12:45:00', 114),
+	(114, 1, 'Better late than never', '2026-11-07 18:00:00', 106),
+	(115, 1, 'Cozy', '2026-11-09 21:00:00', 115),
+	(115, 2, 'Wish I was there', '2026-11-09 21:30:00', 116),
+	(116, 1, 'Haha nice', '2026-11-09 20:50:00', 107),
+	(118, 1, 'Amazing sunset', '2026-11-11 17:00:00', 117),
+	(118, 2, 'Where is this?', '2026-11-11 17:20:00', 119),
+	(119, 1, 'Crazy day', '2026-11-11 17:10:00', 108),
+	(121, 1, 'Beautiful', '2026-11-14 12:00:00', 120),
+	(121, 2, 'Thanks!', '2026-11-14 12:10:00', 119),
+	(122, 1, 'Cool place', '2026-11-14 13:00:00', 109),
+	(124, 1, 'Let\'s go next time', '2026-11-16 19:40:00', 102),
+	(124, 2, 'Count me in', '2026-11-16 20:05:00', 111),
+	(125, 1, 'Nice!', '2026-11-16 20:00:00', 110),
+	(127, 1, 'Morning run?', '2026-11-18 09:30:00', 103),
+	(127, 2, 'Yes!', '2026-11-18 09:45:00', 111),
+	(130, 1, 'Great picture', '2026-11-19 22:00:00', 114),
+	(130, 2, 'Love it', '2026-11-19 22:10:00', 105),
+	(132, 1, 'Late night vibes', '2026-11-19 23:40:00', 113);
 
--- Dumping structure for table Bereal.FRIENDSHIP
-CREATE TABLE IF NOT EXISTS `FRIENDSHIP` (
-  `Friendship_id` int NOT NULL AUTO_INCREMENT,
-  `Date_Requested` date NOT NULL,
-  `ApprovedDate` date DEFAULT NULL,
-  `Requester_ID` int NOT NULL,
-  `Receiver_ID` int NOT NULL,
-  `Status` varchar(10) NOT NULL DEFAULT 'Pending',
-  PRIMARY KEY (`Friendship_id`),
-  KEY `Requester_ID` (`Requester_ID`),
-  KEY `Receiver_ID` (`Receiver_ID`),
-  CONSTRAINT `friendship_ibfk_1` FOREIGN KEY (`Requester_ID`) REFERENCES `USER` (`UserID`),
-  UNIQUE KEY `uq_friendship_pair` (`Requester_ID`,`Receiver_ID`),
-  CONSTRAINT `friendship_ibfk_2` FOREIGN KEY (`Receiver_ID`) REFERENCES `USER` (`UserID`),
-  CONSTRAINT `chk_friendship_status` CHECK (`Status` IN ('Pending','Accepted')),
-  CONSTRAINT `chk_friendship_self` CHECK (`Requester_ID` <> `Receiver_ID`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
--- Dumping data for table Bereal.FRIENDSHIP: ~1 rows (approximately)
+-- Dumping data for table Bereal.FRIENDSHIP: ~29 rows (approximately)
 INSERT INTO `FRIENDSHIP` (`Friendship_id`, `Date_Requested`, `ApprovedDate`, `Requester_ID`, `Receiver_ID`, `Status`) VALUES
-	(1, '2026-11-15', NULL, 3, 2, 'Pending');
-
--- Dumping structure for table Bereal.MOMENT
-CREATE TABLE IF NOT EXISTS `MOMENT` (
-  `MomentID` int NOT NULL AUTO_INCREMENT,
-  `Time` time NOT NULL,
-  `TimeZone` varchar(50) NOT NULL,
-  `Date` date NOT NULL,
-  PRIMARY KEY (`MomentID`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+	(1, '2026-11-15', '2026-11-19', 3, 2, 'Accepted'),
+	(2, '2026-11-19', NULL, 2, 3, 'Pending'),
+	(102, '2026-10-01', '2026-10-02', 105, 106, 'Accepted'),
+	(103, '2026-10-02', '2026-10-03', 106, 107, 'Accepted'),
+	(104, '2026-10-03', '2026-10-03', 107, 108, 'Accepted'),
+	(105, '2026-10-05', '2026-10-06', 108, 109, 'Accepted'),
+	(106, '2026-10-06', '2026-10-08', 109, 110, 'Accepted'),
+	(107, '2026-10-07', '2026-10-07', 110, 111, 'Accepted'),
+	(108, '2026-10-08', '2026-10-10', 111, 112, 'Accepted'),
+	(109, '2026-10-10', '2026-10-11', 112, 113, 'Accepted'),
+	(110, '2026-10-12', '2026-10-12', 113, 114, 'Accepted'),
+	(111, '2026-10-14', '2026-10-15', 114, 115, 'Accepted'),
+	(112, '2026-10-15', '2026-10-17', 115, 116, 'Accepted'),
+	(113, '2026-10-18', '2026-10-18', 116, 117, 'Accepted'),
+	(114, '2026-10-20', '2026-10-21', 117, 118, 'Accepted'),
+	(115, '2026-10-22', '2026-10-23', 118, 119, 'Accepted'),
+	(116, '2026-10-25', '2026-10-26', 119, 120, 'Accepted'),
+	(117, '2026-10-28', '2026-10-29', 105, 107, 'Accepted'),
+	(118, '2026-11-01', '2026-11-02', 106, 108, 'Accepted'),
+	(119, '2026-11-03', '2026-11-03', 105, 109, 'Accepted'),
+	(120, '2026-11-15', '2026-11-16', 102, 105, 'Accepted'),
+	(121, '2026-11-15', '2026-11-15', 104, 102, 'Accepted'),
+	(122, '2026-11-10', NULL, 110, 112, 'Pending'),
+	(123, '2026-11-12', NULL, 113, 105, 'Pending'),
+	(124, '2026-11-14', NULL, 120, 106, 'Pending'),
+	(125, '2026-11-16', NULL, 103, 104, 'Pending'),
+	(126, '2026-11-17', NULL, 114, 102, 'Pending'),
+	(127, '2026-11-17', '2026-11-18', 103, 105, 'Accepted'),
+	(128, '2026-11-19', NULL, 111, 103, 'Pending');
 
 -- Dumping data for table Bereal.MOMENT: ~1 rows (approximately)
 INSERT INTO `MOMENT` (`MomentID`, `Time`, `TimeZone`, `Date`) VALUES
-	(2, '22:00:00', 'Asia/Riyadh', '2026-11-13');
-
--- Dumping structure for table Bereal.POST
-CREATE TABLE IF NOT EXISTS `POST` (
-  `PostID` int NOT NULL AUTO_INCREMENT,
-  `FrontCam` varchar(255) NOT NULL,
-  `BackCam` varchar(255) NOT NULL,
-  `Caption` varchar(255) DEFAULT NULL,
-  `RetakeCount` int DEFAULT '0',
-  `HoursLate` decimal(5,2) DEFAULT '0.00',
-  `PostedAt` datetime NOT NULL,
-  `UserID` int NOT NULL,
-  `MomentID` int NOT NULL,
-  PRIMARY KEY (`PostID`),
-  KEY `fk_post_user` (`UserID`),
-  KEY `fk_post_moment` (`MomentID`),
-  CONSTRAINT `fk_post_moment` FOREIGN KEY (`MomentID`) REFERENCES `MOMENT` (`MomentID`),
-  CONSTRAINT `fk_post_user` FOREIGN KEY (`UserID`) REFERENCES `USER` (`UserID`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+	(2, '22:00:00', 'Asia/Riyadh', '2026-11-13'),
+	(3, '14:30:00', 'Asia/Riyadh', '2026-11-01'),
+	(4, '09:15:00', 'Asia/Riyadh', '2026-11-03'),
+	(5, '18:45:00', 'Asia/Riyadh', '2026-11-05'),
+	(6, '12:00:00', 'Asia/Riyadh', '2026-11-07'),
+	(7, '20:20:00', 'Asia/Riyadh', '2026-11-09'),
+	(8, '16:10:00', 'Asia/Riyadh', '2026-11-11'),
+	(9, '11:35:00', 'Asia/Riyadh', '2026-11-14'),
+	(10, '19:05:00', 'Asia/Riyadh', '2026-11-16'),
+	(11, '08:50:00', 'Asia/Riyadh', '2026-11-18'),
+	(12, '21:25:00', 'Asia/Riyadh', '2026-11-19');
 
 -- Dumping data for table Bereal.POST: ~1 rows (approximately)
 INSERT INTO `POST` (`PostID`, `FrontCam`, `BackCam`, `Caption`, `RetakeCount`, `HoursLate`, `PostedAt`, `UserID`, `MomentID`) VALUES
-	(2, 'images/front2.jpg', 'images/back2.jpg', 'Second BeReal', 0, 0.00, '2026-11-12 21:35:00', 3, 2);
-
--- Dumping structure for table Bereal.REACTS_WITH
-CREATE TABLE IF NOT EXISTS `REACTS_WITH` (
-  `UserID` int NOT NULL,
-  `PostID` int NOT NULL,
-  `RealMojiID` int NOT NULL,
-  PRIMARY KEY (`UserID`,`PostID`,`RealMojiID`),
-  KEY `FK_REACTS_WITH_POST` (`PostID`),
-  KEY `FK_REACTS_WITH_REALMOJIS` (`RealMojiID`),
-  CONSTRAINT `FK_REACTS_WITH_POST` FOREIGN KEY (`PostID`) REFERENCES `POST` (`PostID`) ON DELETE CASCADE,
-  CONSTRAINT `FK_REACTS_WITH_REALMOJIS` FOREIGN KEY (`RealMojiID`) REFERENCES `REALMOJIS` (`RealMojiID`),
-  CONSTRAINT `FK_REACTS_WITH_USER` FOREIGN KEY (`UserID`) REFERENCES `USER` (`UserID`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+	(2, 'front2.jpg', 'back2.jpg', 'Updated BeReal caption', 0, 0.00, '2026-11-12 21:35:00', 3, 2),
+	(103, 'images/front3.jpg', 'images/back3.jpg', 'Afternoon coffee', 0, 0.00, '2026-11-01 14:31:20', 105, 3),
+	(104, 'images/front4.jpg', 'images/back4.jpg', 'Lab day', 1, 0.25, '2026-11-01 14:45:00', 106, 3),
+	(105, 'images/front5.jpg', 'images/back5.jpg', 'Forgot to post', 2, 1.50, '2026-11-01 16:00:00', 107, 3),
+	(106, 'images/front6.jpg', 'images/back6.jpg', 'Early start', 0, 0.00, '2026-11-03 09:16:45', 108, 4),
+	(107, 'images/front7.jpg', 'images/back7.jpg', 'Library vibes', 1, 2.00, '2026-11-03 11:15:00', 109, 4),
+	(108, 'images/front8.jpg', 'images/back8.jpg', NULL, 0, 0.50, '2026-11-03 09:45:00', 110, 4),
+	(109, 'images/front9.jpg', 'images/back9.jpg', 'Dinner time', 3, 0.10, '2026-11-05 18:51:00', 105, 5),
+	(110, 'images/front10.jpg', 'images/back10.jpg', 'Chill evening', 0, 0.00, '2026-11-05 18:46:30', 111, 5),
+	(111, 'images/front11.jpg', 'images/back11.jpg', 'Late again', 2, 3.00, '2026-11-05 21:45:00', 112, 5),
+	(112, 'images/front12.jpg', 'images/back12.jpg', 'Lunch break', 0, 0.00, '2026-11-07 12:01:10', 106, 6),
+	(113, 'images/front13.jpg', 'images/back13.jpg', 'Studio session', 1, 0.75, '2026-11-07 12:45:00', 113, 6),
+	(114, 'images/front14.jpg', 'images/back14.jpg', 'Airport mode', 0, 5.50, '2026-11-07 17:30:00', 114, 6),
+	(115, 'images/front15.jpg', 'images/back15.jpg', 'Movie night', 0, 0.00, '2026-11-09 20:21:40', 107, 7),
+	(116, 'images/front16.jpg', 'images/back16.jpg', 'Concert prep', 1, 0.20, '2026-11-09 20:32:00', 115, 7),
+	(117, 'images/front17.jpg', 'images/back17.jpg', NULL, 0, 1.00, '2026-11-09 21:20:00', 116, 7),
+	(118, 'images/front18.jpg', 'images/back18.jpg', 'Sunset walk', 0, 0.00, '2026-11-11 16:11:05', 108, 8),
+	(119, 'images/front19.jpg', 'images/back19.jpg', 'Burger break', 0, 0.50, '2026-11-11 16:40:00', 117, 8),
+	(120, 'images/front20.jpg', 'images/back20.jpg', 'Caught up late', 1, 4.00, '2026-11-11 20:10:00', 118, 8),
+	(121, 'images/front21.jpg', 'images/back21.jpg', 'Weekend plans', 0, 0.00, '2026-11-14 11:36:30', 119, 9),
+	(122, 'images/front22.jpg', 'images/back22.jpg', 'Desert drive', 0, 0.25, '2026-11-14 11:50:00', 120, 9),
+	(123, 'images/front23.jpg', 'images/back23.jpg', 'Nap time', 2, 2.50, '2026-11-14 14:05:00', 109, 9),
+	(124, 'images/front24.jpg', 'images/back24.jpg', 'Gym done', 0, 0.00, '2026-11-16 19:06:15', 110, 10),
+	(125, 'images/front25.jpg', 'images/back25.jpg', 'Testing BeReal', 0, 0.50, '2026-11-16 19:35:00', 102, 10),
+	(126, 'images/front26.jpg', 'images/back26.jpg', 'Admin checking in', 0, 1.25, '2026-11-16 20:20:00', 104, 10),
+	(127, 'images/front27.jpg', 'images/back27.jpg', 'Morning run', 0, 0.00, '2026-11-18 08:51:40', 111, 11),
+	(128, 'images/front28.jpg', 'images/back28.jpg', 'Breakfast', 1, 0.30, '2026-11-18 09:08:00', 103, 11),
+	(129, 'images/front29.jpg', 'images/back29.jpg', NULL, 0, 6.00, '2026-11-18 14:50:00', 112, 11),
+	(130, 'images/front30.jpg', 'images/back30.jpg', 'Study night', 0, 0.00, '2026-11-19 21:26:20', 113, 12),
+	(131, 'images/front31.jpg', 'images/back31.jpg', 'Quick snack', 1, 0.40, '2026-11-19 21:49:00', 114, 12),
+	(132, 'images/front32.jpg', 'images/back32.jpg', 'Late night vibes', 0, 1.75, '2026-11-19 23:10:00', 105, 12);
 
 -- Dumping data for table Bereal.REACTS_WITH: ~0 rows (approximately)
-
--- Dumping structure for table Bereal.REALMOJIS
-CREATE TABLE IF NOT EXISTS `REALMOJIS` (
-  `RealMojiID` int NOT NULL AUTO_INCREMENT,
-  `Emoji` varchar(50) NOT NULL,
-  `Image` varchar(255) NOT NULL,
-  `UserID` int NOT NULL,
-  PRIMARY KEY (`RealMojiID`),
-  KEY `UserID` (`UserID`),
-  CONSTRAINT `realmojis_ibfk_1` FOREIGN KEY (`UserID`) REFERENCES `USER` (`UserID`)
-) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+INSERT INTO `REACTS_WITH` (`UserID`, `PostID`, `RealMojiID`) VALUES
+	(102, 121, 118),
+	(102, 122, 119),
+	(102, 127, 118),
+	(102, 130, 119),
+	(103, 122, 120),
+	(103, 126, 121),
+	(104, 124, 122),
+	(105, 104, 124),
+	(105, 105, 125),
+	(105, 110, 124),
+	(105, 118, 125),
+	(105, 127, 124),
+	(106, 103, 126),
+	(106, 109, 127),
+	(106, 113, 126),
+	(106, 132, 127),
+	(107, 103, 128),
+	(107, 104, 129),
+	(107, 109, 128),
+	(107, 114, 129),
+	(107, 123, 128),
+	(108, 103, 130),
+	(108, 107, 131),
+	(108, 115, 130),
+	(108, 123, 131),
+	(109, 105, 132),
+	(109, 106, 133),
+	(109, 116, 132),
+	(110, 106, 134),
+	(110, 112, 135),
+	(110, 119, 134),
+	(111, 106, 136),
+	(111, 119, 137),
+	(111, 125, 136),
+	(112, 107, 138),
+	(112, 124, 138),
+	(113, 110, 140),
+	(113, 128, 140),
+	(114, 111, 142),
+	(114, 128, 143),
+	(115, 112, 144),
+	(115, 130, 145),
+	(116, 114, 146),
+	(116, 131, 147),
+	(117, 115, 148),
+	(118, 117, 149),
+	(119, 132, 150),
+	(120, 132, 151);
 
 -- Dumping data for table Bereal.REALMOJIS: ~2 rows (approximately)
 INSERT INTO `REALMOJIS` (`RealMojiID`, `Emoji`, `Image`, `UserID`) VALUES
 	(18, 'Happy', 'happy.jpg', 2),
-	(19, 'Hearts', 'hearts.jpg', 2);
-
--- Dumping structure for table Bereal.TAGGED_ON
-CREATE TABLE IF NOT EXISTS `TAGGED_ON` (
-  `UserID` int NOT NULL,
-  `PostID` int NOT NULL,
-  PRIMARY KEY (`UserID`,`PostID`),
-  KEY `PostID` (`PostID`),
-  CONSTRAINT `tagged_on_ibfk_1` FOREIGN KEY (`UserID`) REFERENCES `USER` (`UserID`),
-  CONSTRAINT `tagged_on_ibfk_2` FOREIGN KEY (`PostID`) REFERENCES `POST` (`PostID`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+	(19, 'Loving', 'hearts.jpg', 2),
+	(118, 'Happy', 'realmojis/u102_happy.jpg', 102),
+	(119, 'Hearts', 'realmojis/u102_hearts.jpg', 102),
+	(120, 'Happy', 'realmojis/u3_happy.jpg', 103),
+	(121, 'Fire', 'realmojis/u3_fire.jpg', 103),
+	(122, 'Laugh', 'realmojis/u4_laugh.jpg', 104),
+	(123, 'Wow', 'realmojis/u4_wow.jpg', 104),
+	(124, 'Happy', 'realmojis/u5_happy.jpg', 105),
+	(125, 'Hearts', 'realmojis/u5_hearts.jpg', 105),
+	(126, 'Cool', 'realmojis/u6_cool.jpg', 106),
+	(127, 'Clap', 'realmojis/u6_clap.jpg', 106),
+	(128, 'Laugh', 'realmojis/u7_laugh.jpg', 107),
+	(129, 'Fire', 'realmojis/u7_fire.jpg', 107),
+	(130, 'Happy', 'realmojis/u8_happy.jpg', 108),
+	(131, 'Wow', 'realmojis/u8_wow.jpg', 108),
+	(132, 'Hearts', 'realmojis/u9_hearts.jpg', 109),
+	(133, 'Clap', 'realmojis/u9_clap.jpg', 109),
+	(134, 'Cool', 'realmojis/u10_cool.jpg', 110),
+	(135, 'Fire', 'realmojis/u10_fire.jpg', 110),
+	(136, 'Happy', 'realmojis/u11_happy.jpg', 111),
+	(137, 'Laugh', 'realmojis/u11_laugh.jpg', 111),
+	(138, 'Wow', 'realmojis/u12_wow.jpg', 112),
+	(139, 'Hearts', 'realmojis/u12_hearts.jpg', 112),
+	(140, 'Clap', 'realmojis/u13_clap.jpg', 113),
+	(141, 'Cool', 'realmojis/u13_cool.jpg', 113),
+	(142, 'Fire', 'realmojis/u14_fire.jpg', 114),
+	(143, 'Happy', 'realmojis/u14_happy.jpg', 114),
+	(144, 'Laugh', 'realmojis/u15_laugh.jpg', 115),
+	(145, 'Wow', 'realmojis/u15_wow.jpg', 115),
+	(146, 'Hearts', 'realmojis/u16_hearts.jpg', 116),
+	(147, 'Cool', 'realmojis/u16_cool.jpg', 116),
+	(148, 'Happy', 'realmojis/u17_happy.jpg', 117),
+	(149, 'Hearts', 'realmojis/u18_hearts.jpg', 118),
+	(150, 'Fire', 'realmojis/u19_fire.jpg', 119),
+	(151, 'Laugh', 'realmojis/u20_laugh.jpg', 120);
 
 -- Dumping data for table Bereal.TAGGED_ON: ~0 rows (approximately)
+INSERT INTO `TAGGED_ON` (`UserID`, `PostID`) VALUES
+	(103, 125),
+	(105, 104),
+	(105, 125),
+	(105, 131),
+	(106, 103),
+	(106, 126),
+	(107, 103),
+	(107, 110),
+	(108, 105),
+	(108, 109),
+	(108, 115),
+	(109, 106),
+	(109, 121),
+	(110, 106),
+	(110, 123),
+	(111, 107),
+	(112, 109),
+	(112, 127),
+	(113, 112),
+	(113, 129),
+	(114, 112),
+	(114, 130),
+	(115, 113),
+	(115, 130),
+	(116, 115),
+	(117, 117),
+	(118, 118),
+	(119, 119),
+	(120, 121);
 
--- Dumping structure for table Bereal.USER
-CREATE TABLE IF NOT EXISTS `USER` (
-  `UserID` int NOT NULL AUTO_INCREMENT,
-  `Email` varchar(255) NOT NULL,
-  `Username` varchar(50) NOT NULL,
-  `Password` varchar(255) NOT NULL,
-  `Bio` text,
-  `DOB` date DEFAULT NULL,
-  `Account_Type` varchar(30) DEFAULT NULL,
-  `UserType` varchar(30) DEFAULT NULL,
-  `JoinDate` date DEFAULT NULL,
-  `ProfilePicture` varchar(255) DEFAULT NULL,
-  `AccountStatus` varchar(30) DEFAULT NULL,
-  PRIMARY KEY (`UserID`),
-  UNIQUE KEY `Email` (`Email`),
-  UNIQUE KEY `Username` (`Username`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
--- Dumping data for table Bereal.USER: ~3 rows (approximately)
+-- Dumping data for table Bereal.USER: ~7 rows (approximately)
 INSERT INTO `USER` (`UserID`, `Email`, `Username`, `Password`, `Bio`, `DOB`, `Account_Type`, `UserType`, `JoinDate`, `ProfilePicture`, `AccountStatus`) VALUES
-	(2, 'testuser@example.com', 'testuser01', 'pbkdf2:120000:9H8JscW348gLapV0WpyH5Q==:uAh/w+ir4aQqx9Bg6NZR1bIT8zeTTyMafPC+ZxkrwJ0=', 'Testing user registration', '2004-05-15', 'Public', 'Regular', '2026-11-15', NULL, 'Active'),
-	(3, 'seconduser@example.com', 'seconduser02', 'pbkdf2:120000:5jNI42Izwvyil0Z40oftaw==:RiW7FPfQAounlzq/o+MXUf5+MQv390ZuR2b1pMVui7U=', 'Enjoying BeReal', '2003-08-20', 'Public', 'Regular', '2026-11-15', NULL, 'Active'),
-	(4, 'admin@example.com', 'admin01', 'pbkdf2:120000:ZiNYd2zy375emE01HRXoEg==:gNaSIo69mQD93RUTZHDPHIjxw+DqWgHiGuuDsVO4qWE=', 'Admin account', '2000-01-01', 'Public', 'Admin', '2026-11-15', NULL, 'Active');
+	(2, 'testuser@example.com', 'testuser01', 'DemoPassword123', 'Computer Science student', '2004-05-15', 'Public', 'Regular', '2026-11-15', 'new_profile.jpg', 'Active'),
+	(3, 'seconduser@example.com', 'seconduser02', 'DemoPassword456', 'Enjoying BeReal', '2003-08-20', 'Public', 'Regular', '2026-11-15', NULL, 'Active'),
+	(8, 'lwia2@gmail.com', 'sudeldjf', 'pbkdf2:120000:g261np1SadYnyAqzV6NtfA==:SaCbKiQHNze7weShNb83luRDBF0v5dEFDc2pZfzWrs0=', 'hdhd', '2000-10-09', 'Public', 'Regular', '2026-11-19', NULL, 'Active'),
+	(9, 'lwaibhdalal@gmail.com', 'dalal183', 'pbkdf2:120000:k2/1lD4PQuclnqKMYCwgWg==:35xpBLGHDDjbW0RmIgIHt7tJrpPJQKhQr8dqtOUBjGc=', '', '2006-03-18', 'Public', 'Regular', '2026-11-20', NULL, 'Active'),
+	(10, 'd.m.lwaibh@gmail.com', 'admin1', 'pbkdf2:120000:pWGillkqhicJZ/4IBvLr0Q==:3+iNnnXdpiFZSlcRt2gGxRFYGkBeZ3YExmJ+euMULas=', '', '2007-10-09', 'Public', 'Admin', '2026-11-20', NULL, 'Active'),
+	(12, 'admin@gmail.com', 'admin5', 'pbkdf2:120000:7K5YZVj8LMWNhKg+NfOtHw==:RtajcHS5wVFFyh7bINDtia6Wfp5ZZQu2eiwbfgqoSL4=', '', NULL, 'Private', 'Admin', '2026-11-20', NULL, 'Active'),
+	(13, 'admin2@gmail.com', 'aadmin1', 'pbkdf2:120000:J6hMK+RpyzM7qh6z57kKeQ==:2N4QHS6cYREyGUo4j7mn6PmePqJ1cIyPC1AC1LuPl6U=', '', NULL, 'Private', 'Admin', '2026-11-20', NULL, 'Active'),
+	(102, 'nasser.f.t@example.com', 'nasser_f_t', 'pbkdf2:120000:SALT0102==:HASH0102=', 'Test account A', '2003-04-10', 'Public', 'Regular', '2026-08-15', 'profiles/nasser.jpg', 'Active'),
+	(103, 'abeer.c.t@example.com', 'abeer_c_t', 'pbkdf2:120000:SALT0103==:HASH0103=', 'Enjoying BeReal', '2003-09-20', 'Public', 'Regular', '2026-08-16', NULL, 'Active'),
+	(104, 'admin.t@example.com', 'admin_t', 'pbkdf2:120000:SALT0104==:HASH0104=', 'Admin test account', '2000-02-02', 'Public', 'Admin', '2026-08-17', NULL, 'Active'),
+	(105, 'sara.ali.t@example.com', 'sara_ali_t', 'pbkdf2:120000:SALT0005==:HASH0005=', 'Coffee and sunsets', '2003-02-11', 'Public', 'Regular', '2026-08-20', 'profiles/sara.jpg', 'Active'),
+	(106, 'omar.k.t@example.com', 'omar_k_t', 'pbkdf2:120000:SALT0006==:HASH0006=', 'CS student', '2002-07-30', 'Private', 'Regular', '2026-08-22', 'profiles/omar.jpg', 'Active'),
+	(107, 'lina.h.t@example.com', 'lina_h_t', 'pbkdf2:120000:SALT0007==:HASH0007=', 'Books and tea', '2004-01-09', 'Public', 'Regular', '2026-08-25', NULL, 'Active'),
+	(108, 'fahad.s.t@example.com', 'fahad_s_t', 'pbkdf2:120000:SALT0008==:HASH0008=', 'Football every weekend', '2001-11-23', 'Public', 'Regular', '2026-08-28', 'profiles/fahad.jpg', 'Active'),
+	(109, 'noura.m.t@example.com', 'noura_m_t', 'pbkdf2:120000:SALT0009==:HASH0009=', 'Photography lover', '2003-05-17', 'Private', 'Regular', '2026-09-01', 'profiles/noura.jpg', 'Active'),
+	(110, 'khalid.r.t@example.com', 'khalid_r_t', 'pbkdf2:120000:SALT0010==:HASH0010=', 'Gym, food, repeat', '2000-09-05', 'Public', 'Regular', '2026-09-03', NULL, 'Active'),
+	(111, 'reem.a.t@example.com', 'reem_a_t', 'pbkdf2:120000:SALT0011==:HASH0011=', 'Just being real', '2004-03-28', 'Public', 'Regular', '2026-09-05', 'profiles/reem.jpg', 'Active'),
+	(112, 'yousef.t.t@example.com', 'yousef_t_t', 'pbkdf2:120000:SALT0012==:HASH0012=', 'Gamer', '2002-12-14', 'Private', 'Regular', '2026-09-08', NULL, 'Active'),
+	(113, 'maha.d.t@example.com', 'maha_d_t', 'pbkdf2:120000:SALT0013==:HASH0013=', 'Art and design', '2003-06-02', 'Public', 'Regular', '2026-09-10', 'profiles/maha.jpg', 'Active'),
+	(114, 'abdulaziz.n.t@example.com', 'abdulaziz_n_t', 'pbkdf2:120000:SALT0014==:HASH0014=', 'Traveler', '1999-04-19', 'Public', 'Premium', '2026-09-12', 'profiles/abdulaziz.jpg', 'Active'),
+	(115, 'dana.q.t@example.com', 'dana_q_t', 'pbkdf2:120000:SALT0015==:HASH0015=', 'Music is life', '2004-08-08', 'Public', 'Regular', '2026-09-15', NULL, 'Active'),
+	(116, 'faisal.b.t@example.com', 'faisal_b_t', 'pbkdf2:120000:SALT0016==:HASH0016=', 'Night owl', '2001-02-26', 'Private', 'Regular', '2026-09-18', NULL, 'Active'),
+	(117, 'hessa.z.t@example.com', 'hessa_z_t', 'pbkdf2:120000:SALT0017==:HASH0017=', 'Foodie', '2003-10-12', 'Public', 'Regular', '2026-09-20', 'profiles/hessa.jpg', 'Suspended'),
+	(118, 'turki.w.t@example.com', 'turki_w_t', 'pbkdf2:120000:SALT0018==:HASH0018=', 'New here', '2002-05-31', 'Public', 'Regular', '2026-09-22', NULL, 'Deactivated'),
+	(119, 'jood.l.t@example.com', 'jood_l_t', 'pbkdf2:120000:SALT0019==:HASH0019=', 'Sunsets and road trips', '2004-07-21', 'Public', 'Regular', '2026-09-25', 'profiles/jood.jpg', 'Active'),
+	(120, 'mishari.g.t@example.com', 'mishari_g_t', 'pbkdf2:120000:SALT0020==:HASH0020=', 'Moderator', '1998-12-01', 'Public', 'Admin', '2026-09-28', NULL, 'Active');
 
 /*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
